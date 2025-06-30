@@ -101,8 +101,16 @@ func (s *Server) Run(ctx context.Context) error {
 
 // registerCapabilities registers all tools and resources with the MCP server.
 func (s *Server) registerCapabilities() error {
-	// TODO: Create tool provider with CAPI service
-	toolProvider := tools.NewProvider(s.mcpServer, s.logger)
+	// TODO: Create CAPI client and service - for now create stub
+	// In a real implementation, we would create the CAPI client here
+	// kubeClient, err := kube.NewClient(s.config.KubeConfigPath, s.config.KubeNamespace)
+	// if err != nil {
+	//     return fmt.Errorf("failed to create kube client: %w", err)
+	// }
+	// clusterService := service.NewClusterService(kubeClient, s.logger)
+	
+	// For now, pass nil - tools will handle gracefully
+	toolProvider := tools.NewProvider(s.mcpServer, s.logger, nil)
 
 	// Register tools
 	if err := toolProvider.RegisterTools(); err != nil {

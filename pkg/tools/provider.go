@@ -7,20 +7,22 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	api "github.com/capi-mcp/capi-mcp-server/api/v1"
+	"github.com/capi-mcp/capi-mcp-server/internal/service"
 )
 
 // Provider handles tool registration and execution.
 type Provider struct {
-	server  *mcp.Server
-	logger  *slog.Logger
-	// TODO: Add CAPI service dependency
+	server         *mcp.Server
+	logger         *slog.Logger
+	clusterService *service.ClusterService
 }
 
 // NewProvider creates a new tool provider.
-func NewProvider(server *mcp.Server, logger *slog.Logger) *Provider {
+func NewProvider(server *mcp.Server, logger *slog.Logger, clusterService *service.ClusterService) *Provider {
 	return &Provider{
-		server: server,
-		logger: logger,
+		server:         server,
+		logger:         logger,
+		clusterService: clusterService,
 	}
 }
 
@@ -131,11 +133,21 @@ type EmptyArgs struct{}
 type ListClustersArgs = EmptyArgs
 
 func (p *Provider) handleListClusters(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[ListClustersArgs]) (*mcp.CallToolResultFor[api.ListClustersOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling list_clusters")
 	
-	result := &api.ListClustersOutput{
-		Clusters: []api.ClusterSummary{},
+	if p.clusterService == nil {
+		return &mcp.CallToolResultFor[api.ListClustersOutput]{
+			Content: []mcp.Content{
+				&mcp.TextContent{
+					Text: "No clusters found (service not initialized)",
+				},
+			},
+		}, nil
+	}
+	
+	result, err := p.clusterService.ListClusters(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list clusters: %w", err)
 	}
 	
 	return &mcp.CallToolResultFor[api.ListClustersOutput]{
@@ -153,10 +165,28 @@ type GetClusterArgs struct {
 }
 
 func (p *Provider) handleGetCluster(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[GetClusterArgs]) (*mcp.CallToolResultFor[api.GetClusterOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling get_cluster", "cluster_name", params.Arguments.ClusterName)
 	
-	return nil, fmt.Errorf("not implemented")
+	if p.clusterService == nil {
+		return nil, fmt.Errorf("cluster service not initialized")
+	}
+	
+	input := api.GetClusterInput{
+		ClusterName: params.Arguments.ClusterName,
+	}
+	
+	result, err := p.clusterService.GetCluster(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster: %w", err)
+	}
+	
+	return &mcp.CallToolResultFor[api.GetClusterOutput]{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Cluster %s status: %s", result.Cluster.Name, result.Cluster.Status),
+			},
+		},
+	}, nil
 }
 
 // CreateClusterArgs defines the arguments for create_cluster.
@@ -168,13 +198,30 @@ type CreateClusterArgs struct {
 }
 
 func (p *Provider) handleCreateCluster(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[CreateClusterArgs]) (*mcp.CallToolResultFor[api.CreateClusterOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling create_cluster", 
 		"cluster_name", params.Arguments.ClusterName,
 		"template_name", params.Arguments.TemplateName,
 	)
 	
-	return nil, fmt.Errorf("not implemented")
+	input := api.CreateClusterInput{
+		ClusterName:       params.Arguments.ClusterName,
+		TemplateName:      params.Arguments.TemplateName,
+		KubernetesVersion: params.Arguments.KubernetesVersion,
+		Variables:         params.Arguments.Variables,
+	}
+	
+	result, err := p.clusterService.CreateCluster(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cluster: %w", err)
+	}
+	
+	return &mcp.CallToolResultFor[api.CreateClusterOutput]{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Cluster %s %s: %s", result.ClusterName, result.Status, result.Message),
+			},
+		},
+	}, nil
 }
 
 // DeleteClusterArgs defines the arguments for delete_cluster.
@@ -183,10 +230,24 @@ type DeleteClusterArgs struct {
 }
 
 func (p *Provider) handleDeleteCluster(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[DeleteClusterArgs]) (*mcp.CallToolResultFor[api.DeleteClusterOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling delete_cluster", "cluster_name", params.Arguments.ClusterName)
 	
-	return nil, fmt.Errorf("not implemented")
+	input := api.DeleteClusterInput{
+		ClusterName: params.Arguments.ClusterName,
+	}
+	
+	result, err := p.clusterService.DeleteCluster(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete cluster: %w", err)
+	}
+	
+	return &mcp.CallToolResultFor[api.DeleteClusterOutput]{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Cluster deletion %s: %s", result.Status, result.Message),
+			},
+		},
+	}, nil
 }
 
 // ScaleClusterArgs defines the arguments for scale_cluster.
@@ -197,14 +258,30 @@ type ScaleClusterArgs struct {
 }
 
 func (p *Provider) handleScaleCluster(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[ScaleClusterArgs]) (*mcp.CallToolResultFor[api.ScaleClusterOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling scale_cluster", 
 		"cluster_name", params.Arguments.ClusterName,
 		"node_pool_name", params.Arguments.NodePoolName,
 		"replicas", params.Arguments.Replicas,
 	)
 	
-	return nil, fmt.Errorf("not implemented")
+	input := api.ScaleClusterInput{
+		ClusterName:  params.Arguments.ClusterName,
+		NodePoolName: params.Arguments.NodePoolName,
+		Replicas:     params.Arguments.Replicas,
+	}
+	
+	result, err := p.clusterService.ScaleCluster(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to scale cluster: %w", err)
+	}
+	
+	return &mcp.CallToolResultFor[api.ScaleClusterOutput]{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Scaling %s: %s (from %d to %d replicas)", result.Status, result.Message, result.OldReplicas, result.NewReplicas),
+			},
+		},
+	}, nil
 }
 
 // GetClusterKubeconfigArgs defines the arguments for get_cluster_kubeconfig.
@@ -213,10 +290,24 @@ type GetClusterKubeconfigArgs struct {
 }
 
 func (p *Provider) handleGetClusterKubeconfig(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[GetClusterKubeconfigArgs]) (*mcp.CallToolResultFor[api.GetClusterKubeconfigOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling get_cluster_kubeconfig", "cluster_name", params.Arguments.ClusterName)
 	
-	return nil, fmt.Errorf("not implemented")
+	input := api.GetClusterKubeconfigInput{
+		ClusterName: params.Arguments.ClusterName,
+	}
+	
+	result, err := p.clusterService.GetClusterKubeconfig(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+	}
+	
+	return &mcp.CallToolResultFor[api.GetClusterKubeconfigOutput]{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Retrieved kubeconfig for cluster %s (%d bytes)", params.Arguments.ClusterName, len(result.Kubeconfig)),
+			},
+		},
+	}, nil
 }
 
 // GetClusterNodesArgs defines the arguments for get_cluster_nodes.
@@ -225,8 +316,22 @@ type GetClusterNodesArgs struct {
 }
 
 func (p *Provider) handleGetClusterNodes(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[GetClusterNodesArgs]) (*mcp.CallToolResultFor[api.GetClusterNodesOutput], error) {
-	// TODO: Implement with CAPI service
 	p.logger.Info("handling get_cluster_nodes", "cluster_name", params.Arguments.ClusterName)
 	
-	return nil, fmt.Errorf("not implemented")
+	input := api.GetClusterNodesInput{
+		ClusterName: params.Arguments.ClusterName,
+	}
+	
+	result, err := p.clusterService.GetClusterNodes(ctx, input)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cluster nodes: %w", err)
+	}
+	
+	return &mcp.CallToolResultFor[api.GetClusterNodesOutput]{
+		Content: []mcp.Content{
+			&mcp.TextContent{
+				Text: fmt.Sprintf("Found %d nodes in cluster %s", len(result.Nodes), params.Arguments.ClusterName),
+			},
+		},
+	}, nil
 }
