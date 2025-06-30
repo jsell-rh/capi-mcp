@@ -1,0 +1,170 @@
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - integration
+    - e2e
+  skip-dirs:
+    - test/e2e
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - unconvert
+    - gocyclo
+    - dupl
+    - gosec
+    - bodyclose
+    - noctx
+    - stylecheck
+    - exportloopref
+    - goconst
+    - gocritic
+    - gofumpt
+    - whitespace
+    - unparam
+    - revive
+    - prealloc
+    - godot
+    - thelper
+    - testpackage
+    - nestif
+    - nolintlint
+    - exhaustive
+    - sqlclosecheck
+    - nilerr
+    - errorlint
+    - paralleltest
+    - makezero
+    - tparallel
+
+  disable:
+    - wsl
+    - nlreturn
+    - gomnd
+    - goerr113
+    - wrapcheck
+    - exhaustivestruct
+    - interfacer
+    - forcetypeassert
+    - ifshort
+    - cyclop
+    - lll
+    - funlen
+    - gocognit
+    - maintidx
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  
+  dupl:
+    threshold: 100
+  
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  
+  misspell:
+    locale: US
+  
+  unused:
+    check-exported: false
+  
+  unparam:
+    check-exported: false
+  
+  nakedret:
+    max-func-lines: 30
+  
+  prealloc:
+    simple: true
+    range-loops: true
+    for-loops: false
+  
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      - dupImport
+      - whyNoLint
+      - hugeParam
+      - rangeValCopy
+  
+  godot:
+    scope: declarations
+    capital: true
+  
+  nestif:
+    min-complexity: 4
+  
+  gofumpt:
+    extra-rules: true
+  
+  errorlint:
+    errorf: true
+    asserts: true
+    comparison: true
+  
+  revive:
+    ignore-generated-header: true
+    severity: warning
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: context-keys-type
+      - name: dot-imports
+      - name: error-return
+      - name: error-strings
+      - name: error-naming
+      - name: exported
+      - name: if-return
+      - name: increment-decrement
+      - name: var-naming
+      - name: var-declaration
+      - name: package-comments
+      - name: range
+      - name: receiver-naming
+      - name: time-naming
+      - name: unexported-return
+      - name: indent-error-flow
+      - name: errorf
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - dupl
+        - gosec
+        - goconst
+    - path: test/
+      linters:
+        - gosec
+        - noctx
+    - text: "ST1000:"
+      linters:
+        - stylecheck
+    - text: "at least one file in a package should have a package comment"
+      linters:
+        - stylecheck
+  
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
