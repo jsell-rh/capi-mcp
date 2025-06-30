@@ -198,6 +198,10 @@ type CreateClusterArgs struct {
 }
 
 func (p *Provider) handleCreateCluster(ctx context.Context, session *mcp.ServerSession, params *mcp.CallToolParamsFor[CreateClusterArgs]) (*mcp.CallToolResultFor[api.CreateClusterOutput], error) {
+	if p.clusterService == nil {
+		return nil, fmt.Errorf("cluster service not initialized")
+	}
+	
 	p.logger.Info("handling create_cluster", 
 		"cluster_name", params.Arguments.ClusterName,
 		"template_name", params.Arguments.TemplateName,
