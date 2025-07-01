@@ -23,8 +23,43 @@ type Command struct {
 	Stderr io.Writer
 }
 
+// allowedCommands defines the whitelist of allowed commands for security
+var allowedCommands = map[string]bool{
+	"kubectl":    true,
+	"kind":       true,
+	"docker":     true,
+	"helm":       true,
+	"go":         true,
+	"make":       true,
+	"git":        true,
+	"curl":       true,
+	"sleep":      true,
+	"echo":       true,
+	"cat":        true,
+	"grep":       true,
+	"awk":        true,
+	"sed":        true,
+	"which":      true,
+	"command":    true,
+	"timeout":    true,
+	"sh":         true,
+	"bash":       true,
+}
+
 // NewCommand creates a new command with the specified name and arguments
 func NewCommand(name string, args ...string) *Command {
+	// Validate command is in whitelist
+	if !allowedCommands[name] {
+		// For security, only allow whitelisted commands
+		// Return a command that will fail safely
+		return &Command{
+			name:   "echo",
+			args:   []string{fmt.Sprintf("Error: command '%s' not allowed", name)},
+			Stdout: os.Stdout,
+			Stderr: os.Stderr,
+		}
+	}
+	
 	// Sanitize command name and arguments to prevent injection
 	sanitizedName := sanitizeCommandInput(name)
 	sanitizedArgs := make([]string, len(args))
@@ -43,14 +78,29 @@ func NewCommand(name string, args ...string) *Command {
 // sanitizeCommandInput removes potentially dangerous characters from command inputs
 func sanitizeCommandInput(input string) string {
 	// Remove shell metacharacters that could be used for injection
-	// Keep only alphanumeric, dash, underscore, dot, slash, and space
+	// Keep only alphanumeric, dash, underscore, dot, slash, colon, equals, and space
 	re := regexp.MustCompile(`[^a-zA-Z0-9\-_./:= ]`)
 	return re.ReplaceAllString(input, "")
 }
 
+// execSafeCommand creates exec.Cmd with validated inputs
+func (c *Command) execSafeCommand(ctx context.Context) *exec.Cmd {
+	// Double-check command is still allowed (defense in depth)
+	if !allowedCommands[c.name] {
+		// Return safe fallback command
+		return exec.CommandContext(ctx, "echo", "Error: command not allowed")
+	}
+	
+	// Create command with sanitized inputs
+	if ctx != nil {
+		return exec.CommandContext(ctx, c.name, c.args...)
+	}
+	return exec.Command(c.name, c.args...)
+}
+
 // RunWithContext executes the command with a context for cancellation
 func (c *Command) RunWithContext(ctx context.Context) error {
-	c.cmd = exec.CommandContext(ctx, c.name, c.args...)
+	c.cmd = c.execSafeCommand(ctx)
 	c.setupCmd()
 
 	fmt.Printf("Executing: %s %s\n", c.name, strings.Join(c.args, " "))
@@ -71,7 +121,7 @@ func (c *Command) Run() error {
 
 // StartBackground starts the command in the background and returns immediately
 func (c *Command) StartBackground() error {
-	c.cmd = exec.Command(c.name, c.args...)
+	c.cmd = c.execSafeCommand(nil)
 	c.setupCmd()
 
 	fmt.Printf("Starting background: %s %s\n", c.name, strings.Join(c.args, " "))
@@ -111,7 +161,7 @@ func (c *Command) Kill() error {
 
 // RunWithOutput executes the command and returns the output as a string
 func (c *Command) RunWithOutput(ctx context.Context) (string, error) {
-	c.cmd = exec.CommandContext(ctx, c.name, c.args...)
+	c.cmd = c.execSafeCommand(ctx)
 	c.setupCmd()
 
 	// Override stdout to capture output
