@@ -70,7 +70,7 @@ check_prerequisites() {
 create_kind_config() {
     local config_file="/tmp/kind-config-${KIND_CLUSTER_NAME}.yaml"
     
-    log "Creating kind cluster configuration..."
+    log "Creating kind cluster configuration..." >&2
     
     cat > "$config_file" <<EOF
 kind: Cluster
