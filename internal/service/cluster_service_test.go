@@ -14,6 +14,7 @@ import (
 
 	api "github.com/capi-mcp/capi-mcp-server/api/v1"
 	"github.com/capi-mcp/capi-mcp-server/internal/kube"
+	"github.com/capi-mcp/capi-mcp-server/pkg/provider"
 )
 
 func createTestCluster(name, namespace string, phase clusterv1.ClusterPhase) *clusterv1.Cluster {
@@ -88,8 +89,11 @@ func setupTestService() *ClusterService {
 	kubeClient := &kube.Client{} // Mock client for unit tests
 	logger := slog.New(slog.NewTextHandler(nil, &slog.HandlerOptions{Level: slog.LevelError}))
 	
+	// Create mock provider manager for tests
+	providerManager := provider.NewProviderManager()
+	
 	// For these tests, we'll test the business logic parts that don't require the client
-	return NewClusterService(kubeClient, logger)
+	return NewClusterService(kubeClient, logger, providerManager)
 }
 
 func TestClusterService_ListClusters(t *testing.T) {

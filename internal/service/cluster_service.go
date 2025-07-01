@@ -15,19 +15,22 @@ import (
 
 	api "github.com/capi-mcp/capi-mcp-server/api/v1"
 	"github.com/capi-mcp/capi-mcp-server/internal/kube"
+	"github.com/capi-mcp/capi-mcp-server/pkg/provider"
 )
 
 // ClusterService handles CAPI cluster operations.
 type ClusterService struct {
-	kubeClient *kube.Client
-	logger     *slog.Logger
+	kubeClient      *kube.Client
+	logger          *slog.Logger
+	providerManager *provider.ProviderManager
 }
 
 // NewClusterService creates a new cluster service.
-func NewClusterService(kubeClient *kube.Client, logger *slog.Logger) *ClusterService {
+func NewClusterService(kubeClient *kube.Client, logger *slog.Logger, providerManager *provider.ProviderManager) *ClusterService {
 	return &ClusterService{
-		kubeClient: kubeClient,
-		logger:     logger,
+		kubeClient:      kubeClient,
+		logger:          logger,
+		providerManager: providerManager,
 	}
 }
 
@@ -126,6 +129,18 @@ func (s *ClusterService) GetCluster(ctx context.Context, input api.GetClusterInp
 
 // CreateCluster creates a new cluster from a template.
 func (s *ClusterService) CreateCluster(ctx context.Context, input api.CreateClusterInput) (*api.CreateClusterOutput, error) {
+	// Determine provider from variables or cluster class metadata
+	providerName := s.extractProviderName(input.Variables, input.TemplateName)
+	
+	// Validate cluster configuration with provider-specific logic
+	if s.providerManager != nil {
+		if prov, exists := s.providerManager.GetProvider(providerName); exists {
+			if err := prov.ValidateClusterConfig(ctx, input.Variables); err != nil {
+				return nil, fmt.Errorf("provider validation failed: %w", err)
+			}
+		}
+	}
+
 	// Validate ClusterClass exists
 	clusterClass, err := s.kubeClient.GetClusterClass(ctx, input.TemplateName)
 	if err != nil {
@@ -391,4 +406,31 @@ func getNodeRoles(node *corev1.Node) []string {
 		roles = append(roles, "worker")
 	}
 	return roles
+}
+
+// extractProviderName determines the provider name from cluster variables or template name.
+// This is used to route provider-specific validation and operations.
+func (s *ClusterService) extractProviderName(variables map[string]interface{}, templateName string) string {
+	// First, check if provider is explicitly specified in variables
+	if provider, ok := variables["provider"]; ok {
+		if providerStr, ok := provider.(string); ok {
+			return providerStr
+		}
+	}
+
+	// Fall back to inferring from template name
+	// Common patterns: "aws-template", "azure-cluster-class", etc.
+	templateLower := strings.ToLower(templateName)
+	if strings.Contains(templateLower, "aws") {
+		return "aws"
+	}
+	if strings.Contains(templateLower, "azure") {
+		return "azure"
+	}
+	if strings.Contains(templateLower, "gcp") || strings.Contains(templateLower, "google") {
+		return "gcp"
+	}
+
+	// Default to AWS for V1.0 scope
+	return "aws"
 }

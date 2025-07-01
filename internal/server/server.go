@@ -8,6 +8,10 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/capi-mcp/capi-mcp-server/internal/config"
+	"github.com/capi-mcp/capi-mcp-server/internal/kube"
+	"github.com/capi-mcp/capi-mcp-server/internal/service"
+	"github.com/capi-mcp/capi-mcp-server/pkg/provider"
+	"github.com/capi-mcp/capi-mcp-server/pkg/provider/aws"
 	"github.com/capi-mcp/capi-mcp-server/pkg/tools"
 )
 
@@ -101,16 +105,25 @@ func (s *Server) Run(ctx context.Context) error {
 
 // registerCapabilities registers all tools and resources with the MCP server.
 func (s *Server) registerCapabilities() error {
+	// Create provider manager and register AWS provider
+	providerManager := provider.NewProviderManager()
+	awsProvider := aws.NewAWSProvider("") // Use default region
+	providerManager.RegisterProvider(awsProvider)
+	
 	// TODO: Create CAPI client and service - for now create stub
 	// In a real implementation, we would create the CAPI client here
 	// kubeClient, err := kube.NewClient(s.config.KubeConfigPath, s.config.KubeNamespace)
 	// if err != nil {
 	//     return fmt.Errorf("failed to create kube client: %w", err)
 	// }
-	// clusterService := service.NewClusterService(kubeClient, s.logger)
+	// clusterService := service.NewClusterService(kubeClient, s.logger, providerManager)
 	
-	// For now, pass nil - tools will handle gracefully
-	toolProvider := tools.NewProvider(s.mcpServer, s.logger, nil)
+	// For now, create stub kube client and service with provider manager
+	var kubeClient *kube.Client // nil for now
+	clusterService := service.NewClusterService(kubeClient, s.logger, providerManager)
+	
+	// Create tool provider
+	toolProvider := tools.NewProvider(s.mcpServer, s.logger, clusterService)
 
 	// Register tools
 	if err := toolProvider.RegisterTools(); err != nil {
