@@ -296,7 +296,7 @@ func TestValidator_ValidateClusterVariables(t *testing.T) {
 		{
 			name:        "nil variables",
 			input:       nil,
-			expectError: false,
+			expectError: true,
 		},
 	}
 

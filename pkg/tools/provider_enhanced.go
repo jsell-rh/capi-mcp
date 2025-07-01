@@ -194,15 +194,15 @@ func (p *EnhancedProvider) handleListClusters(ctx context.Context, input map[str
 }
 
 func (p *EnhancedProvider) handleGetCluster(ctx context.Context, input map[string]interface{}) (interface{}, error) {
-	// Parse and validate input
-	var getInput api.GetClusterInput
-	if err := parseInput(input, &getInput); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInvalidInput, "invalid input parameters")
+	// Validate cluster name from input
+	if err := p.validateClusterNameFromInput(input); err != nil {
+		return nil, err
 	}
 	
-	// Validate cluster name
-	if err := p.validator.ValidateClusterName(getInput.ClusterName); err != nil {
-		return nil, err
+	// Parse input after validation
+	var getInput api.GetClusterInput
+	if err := parseInput(input, &getInput); err != nil {
+		return nil, errors.Wrap(err, errors.CodeInvalidInput, "failed to parse validated input")
 	}
 	
 	// Check if cluster service is available
@@ -232,27 +232,15 @@ func (p *EnhancedProvider) handleGetCluster(ctx context.Context, input map[strin
 }
 
 func (p *EnhancedProvider) handleCreateCluster(ctx context.Context, input map[string]interface{}) (interface{}, error) {
-	// Parse and validate input
+	// Comprehensive input validation using the enhanced validator
+	if err := p.validator.ValidateCreateClusterInput(input); err != nil {
+		return nil, err
+	}
+	
+	// Parse input after validation
 	var createInput api.CreateClusterInput
 	if err := parseInput(input, &createInput); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInvalidInput, "invalid input parameters")
-	}
-	
-	// Validate cluster name
-	if err := p.validator.ValidateClusterName(createInput.ClusterName); err != nil {
-		return nil, err
-	}
-	
-	// Validate Kubernetes version
-	if err := p.validator.ValidateKubernetesVersion(createInput.KubernetesVersion); err != nil {
-		return nil, err
-	}
-	
-	// Validate variables if present
-	if createInput.Variables != nil {
-		if err := p.validator.ValidateClusterVariables(createInput.Variables); err != nil {
-			return nil, err
-		}
+		return nil, errors.Wrap(err, errors.CodeInvalidInput, "failed to parse validated input")
 	}
 	
 	// Check if cluster service is available
@@ -282,15 +270,15 @@ func (p *EnhancedProvider) handleCreateCluster(ctx context.Context, input map[st
 }
 
 func (p *EnhancedProvider) handleDeleteCluster(ctx context.Context, input map[string]interface{}) (interface{}, error) {
-	// Parse and validate input
-	var deleteInput api.DeleteClusterInput
-	if err := parseInput(input, &deleteInput); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInvalidInput, "invalid input parameters")
+	// Validate cluster name from input
+	if err := p.validateClusterNameFromInput(input); err != nil {
+		return nil, err
 	}
 	
-	// Validate cluster name
-	if err := p.validator.ValidateClusterName(deleteInput.ClusterName); err != nil {
-		return nil, err
+	// Parse input after validation
+	var deleteInput api.DeleteClusterInput
+	if err := parseInput(input, &deleteInput); err != nil {
+		return nil, errors.Wrap(err, errors.CodeInvalidInput, "failed to parse validated input")
 	}
 	
 	// Check if cluster service is available
@@ -320,20 +308,15 @@ func (p *EnhancedProvider) handleDeleteCluster(ctx context.Context, input map[st
 }
 
 func (p *EnhancedProvider) handleScaleCluster(ctx context.Context, input map[string]interface{}) (interface{}, error) {
-	// Parse and validate input
+	// Comprehensive input validation using the enhanced validator
+	if err := p.validator.ValidateScaleClusterInput(input); err != nil {
+		return nil, err
+	}
+	
+	// Parse input after validation
 	var scaleInput api.ScaleClusterInput
 	if err := parseInput(input, &scaleInput); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInvalidInput, "invalid input parameters")
-	}
-	
-	// Validate cluster name
-	if err := p.validator.ValidateClusterName(scaleInput.ClusterName); err != nil {
-		return nil, err
-	}
-	
-	// Validate replica count
-	if err := p.validator.ValidateReplicaCount(int32(scaleInput.Replicas)); err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, errors.CodeInvalidInput, "failed to parse validated input")
 	}
 	
 	// Check if cluster service is available
@@ -363,15 +346,15 @@ func (p *EnhancedProvider) handleScaleCluster(ctx context.Context, input map[str
 }
 
 func (p *EnhancedProvider) handleGetClusterKubeconfig(ctx context.Context, input map[string]interface{}) (interface{}, error) {
-	// Parse and validate input
-	var kubeconfigInput api.GetClusterKubeconfigInput
-	if err := parseInput(input, &kubeconfigInput); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInvalidInput, "invalid input parameters")
+	// Validate cluster name from input
+	if err := p.validateClusterNameFromInput(input); err != nil {
+		return nil, err
 	}
 	
-	// Validate cluster name
-	if err := p.validator.ValidateClusterName(kubeconfigInput.ClusterName); err != nil {
-		return nil, err
+	// Parse input after validation
+	var kubeconfigInput api.GetClusterKubeconfigInput
+	if err := parseInput(input, &kubeconfigInput); err != nil {
+		return nil, errors.Wrap(err, errors.CodeInvalidInput, "failed to parse validated input")
 	}
 	
 	// Check if cluster service is available
@@ -401,15 +384,15 @@ func (p *EnhancedProvider) handleGetClusterKubeconfig(ctx context.Context, input
 }
 
 func (p *EnhancedProvider) handleGetClusterNodes(ctx context.Context, input map[string]interface{}) (interface{}, error) {
-	// Parse and validate input
-	var nodesInput api.GetClusterNodesInput
-	if err := parseInput(input, &nodesInput); err != nil {
-		return nil, errors.Wrap(err, errors.CodeInvalidInput, "invalid input parameters")
+	// Validate cluster name from input
+	if err := p.validateClusterNameFromInput(input); err != nil {
+		return nil, err
 	}
 	
-	// Validate cluster name
-	if err := p.validator.ValidateClusterName(nodesInput.ClusterName); err != nil {
-		return nil, err
+	// Parse input after validation
+	var nodesInput api.GetClusterNodesInput
+	if err := parseInput(input, &nodesInput); err != nil {
+		return nil, errors.Wrap(err, errors.CodeInvalidInput, "failed to parse validated input")
 	}
 	
 	// Check if cluster service is available
@@ -436,6 +419,24 @@ func (p *EnhancedProvider) handleGetClusterNodes(ctx context.Context, input map[
 	default:
 		return nil, errors.New(errors.CodeInternal, "unknown cluster service type")
 	}
+}
+
+// Helper validation functions
+
+// validateClusterNameFromInput validates cluster name from raw input map
+func (p *EnhancedProvider) validateClusterNameFromInput(input map[string]interface{}) error {
+	clusterName, ok := input["clusterName"].(string)
+	if !ok {
+		return errors.New(errors.CodeInvalidInput, 
+			"clusterName is required and must be a string").
+			WithDetails("field", "clusterName", "provided_type", fmt.Sprintf("%T", input["clusterName"]))
+	}
+	
+	if err := p.validator.ValidateClusterName(clusterName); err != nil {
+		return err
+	}
+	
+	return nil
 }
 
 // Helper function to convert structs to maps
