@@ -49,6 +49,7 @@ To solve this, long-running mutating operations (`create_cluster`, `delete_clust
 ## 3.0 Source Code Organization
 
 A standardized directory structure will be enforced to ensure a clean separation of concerns and facilitate navigation for developers.
+```
 /capi-mcp-server
 ├── /api
 │   └── /v1           # Go structs defining MCP tool and resource JSON schemas
@@ -71,4 +72,5 @@ A standardized directory structure will be enforced to ensure a clean separation
 │   └── /e2e          # End-to-end tests
 ├── go.mod
 └── Dockerfile
+```
 
