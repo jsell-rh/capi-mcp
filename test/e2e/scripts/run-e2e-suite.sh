@@ -507,7 +507,7 @@ PREREQUISITES:
     - kubectl (v1.28+)
     - clusterctl (v1.6.0+)
     - Docker (v20.10+)
-    - Go (v1.23+)
+    - Go (v1.24+)
     - AWS CLI (for AWS tests)
     - Valid AWS credentials (for AWS tests)
 

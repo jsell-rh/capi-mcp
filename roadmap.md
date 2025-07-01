@@ -94,7 +94,7 @@ These are the non-negotiable rules for all development on this project.
 
 To ensure a consistent and effective development process, all engineers will use the following set of tools and versions.
 
-*   **Go**: `1.23.x`
+*   **Go**: `1.24.x`
 *   **Docker & Docker Compose**: Latest stable version
 *   **Kubernetes CLI**: `kubectl` (latest stable)
 *   **Helm CLI**: `helm` (latest stable)

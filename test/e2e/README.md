@@ -96,7 +96,7 @@ The E2E testing framework creates a complete testing environment that includes:
 - **kubectl** (v1.28+): Kubernetes CLI
 - **clusterctl** (v1.6.0+): CAPI CLI tool
 - **Docker** (v20.10+): Container runtime
-- **Go** (v1.23+): For running tests
+- **Go** (v1.24+): For running tests
 
 ### AWS Prerequisites
 - AWS account with appropriate permissions

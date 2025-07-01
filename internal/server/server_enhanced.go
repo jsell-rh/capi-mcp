@@ -38,7 +38,7 @@ func NewEnhanced(cfg *config.Config) (*EnhancedServer, error) {
 	metricsCollector := metrics.NewCollector()
 
 	// Set server information metrics
-	metricsCollector.SetServerInfo(cfg.Version, cfg.BuildDate, "go1.23")
+	metricsCollector.SetServerInfo(cfg.Version, cfg.BuildDate, "go1.24")
 
 	// Create logger from config with metrics integration
 	logLevel := logging.ParseLevel(cfg.LogLevel)

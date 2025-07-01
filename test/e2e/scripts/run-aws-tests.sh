@@ -287,7 +287,7 @@ PREREQUISITES:
     - kubectl (v1.28+)
     - clusterctl (v1.6.0+)
     - Docker (v20.10+)
-    - Go (v1.23+)
+    - Go (v1.24+)
     - AWS CLI
     - Valid AWS credentials
     - EC2 key pair (optional, for SSH access)

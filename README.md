@@ -44,7 +44,7 @@ See [architecture.md](architecture.md) for detailed design documentation.
 ## Development
 
 ### Prerequisites
-- Go 1.23.x
+- Go 1.24.x
 - Docker & Docker Compose
 - kubectl
 - kind (for local testing)
