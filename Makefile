@@ -31,7 +31,7 @@ clean: ## Clean build artifacts
 
 test: ## Run unit tests
 	@echo "Running tests..."
-	$(GO) test $(GOFLAGS) -race -coverprofile=coverage.out ./...
+	$(GO) test $(GOFLAGS) -race -coverprofile=coverage.out -tags="!e2e" ./...
 
 test-integration: ## Run integration tests
 	@echo "Running integration tests..."

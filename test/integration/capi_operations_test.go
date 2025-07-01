@@ -61,10 +61,11 @@ func NewCAPIOperationsTestSuite(t *testing.T) *CAPIOperationsTestSuite {
 
 // SetupWithResources creates a fake Kubernetes client with the provided resources.
 func (s *CAPIOperationsTestSuite) SetupWithResources(t *testing.T, objects ...client.Object) {
-	// Create fake client with provided objects
+	// Create fake client with provided objects and status subresource support
 	s.client = fake.NewClientBuilder().
 		WithScheme(s.scheme).
 		WithObjects(objects...).
+		WithStatusSubresource(&clusterv1.Cluster{}, &clusterv1.MachineDeployment{}).
 		Build()
 
 	// Create enhanced kube client that uses our fake client

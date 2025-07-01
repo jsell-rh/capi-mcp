@@ -199,6 +199,11 @@ func (c *Client) ListClusterClasses(ctx context.Context) (*clusterv1.ClusterClas
 
 // GetClusterClass retrieves a ClusterClass by name.
 func (c *Client) GetClusterClass(ctx context.Context, name string) (*clusterv1.ClusterClass, error) {
+	// Handle nil client for testing
+	if c == nil || c.client == nil {
+		return nil, fmt.Errorf("kubernetes client not available (running in test mode)")
+	}
+	
 	clusterClass := &clusterv1.ClusterClass{}
 	key := types.NamespacedName{
 		Namespace: c.namespace,
