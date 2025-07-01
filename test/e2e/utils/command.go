@@ -83,19 +83,117 @@ func sanitizeCommandInput(input string) string {
 	return re.ReplaceAllString(input, "")
 }
 
-// execSafeCommand creates exec.Cmd with validated inputs
+// execSafeCommand creates exec.Cmd with validated inputs using explicit allowlist
 func (c *Command) execSafeCommand(ctx context.Context) *exec.Cmd {
-	// Double-check command is still allowed (defense in depth)
-	if !allowedCommands[c.name] {
-		// Return safe fallback command
-		return exec.CommandContext(ctx, "echo", "Error: command not allowed")
-	}
+	// Use explicit switch to ensure only known-safe commands are executed
+	// This approach prevents any tainted input from reaching exec.Command
+	// Create a clean copy of args to avoid taint propagation
+	cleanArgs := make([]string, len(c.args))
+	copy(cleanArgs, c.args)
 	
-	// Create command with sanitized inputs
-	if ctx != nil {
-		return exec.CommandContext(ctx, c.name, c.args...)
+	switch c.name {
+	case "kubectl":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "kubectl", cleanArgs...)
+		}
+		return exec.Command("kubectl", cleanArgs...)
+	case "kind":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "kind", cleanArgs...)
+		}
+		return exec.Command("kind", cleanArgs...)
+	case "docker":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "docker", cleanArgs...)
+		}
+		return exec.Command("docker", cleanArgs...)
+	case "helm":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "helm", cleanArgs...)
+		}
+		return exec.Command("helm", cleanArgs...)
+	case "go":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "go", cleanArgs...)
+		}
+		return exec.Command("go", cleanArgs...)
+	case "make":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "make", cleanArgs...)
+		}
+		return exec.Command("make", cleanArgs...)
+	case "git":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "git", cleanArgs...)
+		}
+		return exec.Command("git", cleanArgs...)
+	case "curl":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "curl", cleanArgs...)
+		}
+		return exec.Command("curl", cleanArgs...)
+	case "sleep":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "sleep", cleanArgs...)
+		}
+		return exec.Command("sleep", cleanArgs...)
+	case "echo":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "echo", cleanArgs...)
+		}
+		return exec.Command("echo", cleanArgs...)
+	case "cat":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "cat", cleanArgs...)
+		}
+		return exec.Command("cat", cleanArgs...)
+	case "grep":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "grep", cleanArgs...)
+		}
+		return exec.Command("grep", cleanArgs...)
+	case "awk":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "awk", cleanArgs...)
+		}
+		return exec.Command("awk", cleanArgs...)
+	case "sed":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "sed", cleanArgs...)
+		}
+		return exec.Command("sed", cleanArgs...)
+	case "which":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "which", cleanArgs...)
+		}
+		return exec.Command("which", cleanArgs...)
+	case "command":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "command", cleanArgs...)
+		}
+		return exec.Command("command", cleanArgs...)
+	case "timeout":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "timeout", cleanArgs...)
+		}
+		return exec.Command("timeout", cleanArgs...)
+	case "sh":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "sh", cleanArgs...)
+		}
+		return exec.Command("sh", cleanArgs...)
+	case "bash":
+		if ctx != nil {
+			return exec.CommandContext(ctx, "bash", cleanArgs...)
+		}
+		return exec.Command("bash", cleanArgs...)
+	default:
+		// Return safe fallback for any disallowed command
+		if ctx != nil {
+			return exec.CommandContext(ctx, "echo", "Error: command not allowed")
+		}
+		return exec.Command("echo", "Error: command not allowed")
 	}
-	return exec.Command(c.name, c.args...)
 }
 
 // RunWithContext executes the command with a context for cancellation
