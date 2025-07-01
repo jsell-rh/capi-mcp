@@ -2,6 +2,16 @@
 
 A production-grade Model Context Protocol (MCP) server for the Kubernetes Cluster API (CAPI), enabling AI agents to manage Kubernetes clusters through a secure, standardized interface.
 
+## AI Development Disclaimer
+
+⚠️ **Important**: This repository was primarily created by Claude Code, Anthropic's AI assistant, working in collaboration with a human developer. The code, documentation, tests, and overall architecture were generated through AI-assisted development sessions.
+
+While the code follows industry best practices and includes comprehensive testing, users should:
+- Review all code before deploying to production environments
+- Understand the security implications of the implementation
+- Validate the code meets their specific requirements and compliance standards
+- Consider the experimental nature of AI-generated code in critical systems
+
 ## Overview
 
 The CAPI MCP Server acts as a bridge between AI agents (MCP clients) and CAPI management clusters. It provides a set of tools that abstract the complexity of CAPI into simple, reliable operations for cluster lifecycle management.
@@ -106,16 +116,6 @@ Please read [CLAUDE.md](CLAUDE.md) for development guidelines and standards.
 ## Roadmap
 
 See [roadmap.md](roadmap.md) for the project vision and development phases.
-
-## AI Development Disclaimer
-
-⚠️ **Important**: This repository was primarily created by Claude, Anthropic's AI assistant, working in collaboration with a human developer. The code, documentation, tests, and overall architecture were generated through AI-assisted development sessions.
-
-While the code follows industry best practices and includes comprehensive testing, users should:
-- Review all code before deploying to production environments
-- Understand the security implications of the implementation
-- Validate the code meets their specific requirements and compliance standards
-- Consider the experimental nature of AI-generated code in critical systems
 
 ## License
 
