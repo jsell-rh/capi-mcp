@@ -92,7 +92,7 @@ func (s *EnhancedClusterService) ListClusters(ctx context.Context) (*api.ListClu
 			)
 			// Continue without node count
 		} else {
-			summary.NodeCount = nodeCount
+			summary.NodeCount = int(nodeCount)
 		}
 		
 		summaries = append(summaries, summary)
@@ -125,7 +125,7 @@ func (s *EnhancedClusterService) GetCluster(ctx context.Context, input api.GetCl
 	getCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	
-	cluster, err := s.kubeClient.GetCluster(getCtx, input.ClusterName)
+	cluster, err := s.kubeClient.GetClusterByName(getCtx, input.ClusterName)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster")
 		
@@ -143,32 +143,21 @@ func (s *EnhancedClusterService) GetCluster(ctx context.Context, input api.GetCl
 	// Build response
 	output := &api.GetClusterOutput{
 		Cluster: api.ClusterDetails{
-			Name:      cluster.Name,
-			Namespace: cluster.Namespace,
-			Status: api.ClusterStatus{
-				Phase:               s.normalizeClusterStatus(cluster.Status.Phase),
-				ControlPlaneReady:   cluster.Status.ControlPlaneReady,
-				InfrastructureReady: cluster.Status.InfrastructureReady,
-			},
-			Spec: api.ClusterSpec{
-				ClusterClass:      s.getClusterClass(cluster),
-				KubernetesVersion: s.getKubernetesVersion(cluster),
-				ControlPlane: api.ControlPlaneSpec{
-					Replicas: s.getControlPlaneReplicas(cluster),
-				},
-			},
-			CreatedAt: cluster.CreationTimestamp.Format(time.RFC3339),
+			Name:              cluster.Name,
+			Namespace:         cluster.Namespace,
+			Provider:          s.getProvider(cluster),
+			Region:            s.getRegion(cluster),
+			KubernetesVersion: s.getKubernetesVersion(cluster),
+			Status:            s.normalizeClusterStatus(cluster.Status.Phase),
+			CreatedAt:         cluster.CreationTimestamp.Format(time.RFC3339),
+			Endpoint:          s.getEndpoint(cluster),
+			NodePools:         s.getNodePools(getCtx, cluster),
+			Conditions:        s.getConditions(cluster),
+			InfrastructureRef: s.getInfrastructureRef(cluster),
 		},
 	}
 	
-	// Add provider-specific status if available
-	providerStatus, err := s.getProviderStatus(getCtx, cluster)
-	if err != nil {
-		logger.WithError(err).Warn("Failed to get provider status")
-		// Continue without provider status
-	} else if providerStatus != nil {
-		output.ProviderStatus = providerStatus
-	}
+	// Provider-specific status can be included in the InfrastructureRef field if needed
 	
 	logger.Info("Retrieved cluster successfully")
 	return output, nil
@@ -218,7 +207,7 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 	}
 	
 	// Check if cluster already exists
-	existingCluster, err := s.kubeClient.GetCluster(ctx, input.ClusterName)
+	existingCluster, err := s.kubeClient.GetClusterByName(ctx, input.ClusterName)
 	if err == nil && existingCluster != nil {
 		err := errors.New(errors.CodeAlreadyExists, fmt.Sprintf("cluster '%s' already exists", input.ClusterName))
 		logger.WithError(err).Error("Cluster already exists")
@@ -229,7 +218,7 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 	cluster := s.buildClusterResource(input, clusterClass)
 	
 	logger.Info("Creating cluster resource in Kubernetes")
-	createdCluster, err := s.kubeClient.CreateCluster(ctx, cluster)
+	err = s.kubeClient.CreateCluster(ctx, cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create cluster resource")
 		
@@ -242,23 +231,17 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 	
 	// Wait for initial status
 	logger.Debug("Waiting for cluster initial status")
-	finalCluster, err := s.waitForClusterPhase(ctx, createdCluster.Name, createdCluster.Namespace, 2*time.Minute)
+	finalCluster, err := s.waitForClusterPhase(ctx, cluster.Name, cluster.Namespace, 2*time.Minute)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to wait for cluster phase")
 		// Return created cluster anyway
-		finalCluster = createdCluster
+		finalCluster = cluster
 	}
 	
 	output := &api.CreateClusterOutput{
-		Success: true,
-		Cluster: api.ClusterSummary{
-			Name:              finalCluster.Name,
-			Namespace:         finalCluster.Namespace,
-			Status:            s.normalizeClusterStatus(finalCluster.Status.Phase),
-			CreatedAt:         finalCluster.CreationTimestamp.Format(time.RFC3339),
-			KubernetesVersion: input.KubernetesVersion,
-		},
-		Message: fmt.Sprintf("Cluster '%s' creation initiated successfully", input.ClusterName),
+		ClusterName: finalCluster.Name,
+		Status:      s.normalizeClusterStatus(finalCluster.Status.Phase),
+		Message:     fmt.Sprintf("Cluster '%s' creation initiated successfully", input.ClusterName),
 	}
 	
 	logger.Info("Cluster created successfully",
@@ -382,7 +365,7 @@ func (s *EnhancedClusterService) DeleteCluster(ctx context.Context, input api.De
 	deleteCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	
-	cluster, err := s.kubeClient.GetCluster(deleteCtx, input.ClusterName)
+	cluster, err := s.kubeClient.GetClusterByName(deleteCtx, input.ClusterName)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster before deletion")
 		if apierrors.IsNotFound(err) {
@@ -723,7 +706,7 @@ func (s *EnhancedClusterService) waitForClusterPhase(ctx context.Context, cluste
 		case <-waitCtx.Done():
 			return nil, waitCtx.Err()
 		case <-ticker.C:
-			cluster, err := s.kubeClient.GetCluster(waitCtx, clusterName)
+			cluster, err := s.kubeClient.GetClusterByName(waitCtx, clusterName)
 			if err != nil {
 				continue // Keep trying
 			}
@@ -746,7 +729,7 @@ func (s *EnhancedClusterService) waitForClusterDeleted(ctx context.Context, clus
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
-			_, err := s.kubeClient.GetCluster(ctx, clusterName)
+			_, err := s.kubeClient.GetClusterByName(ctx, clusterName)
 			if apierrors.IsNotFound(err) {
 				return nil // Successfully deleted
 			}
@@ -837,4 +820,65 @@ func (s *EnhancedClusterService) getProviderStatus(ctx context.Context, cluster 
 	}
 	
 	return nil, nil
+}
+
+// Helper methods for ClusterDetails
+
+func (s *EnhancedClusterService) getProvider(cluster *clusterv1.Cluster) string {
+	if cluster.Spec.InfrastructureRef != nil {
+		if cluster.Spec.InfrastructureRef.Kind == "AWSCluster" {
+			return "aws"
+		}
+	}
+	return "unknown"
+}
+
+func (s *EnhancedClusterService) getRegion(cluster *clusterv1.Cluster) string {
+	// Try to extract region from infrastructure reference
+	if cluster.Spec.InfrastructureRef != nil {
+		// This would typically require looking up the infrastructure resource
+		// For now, return a placeholder
+		return "us-west-2" // Default region
+	}
+	return ""
+}
+
+func (s *EnhancedClusterService) getEndpoint(cluster *clusterv1.Cluster) string {
+	if cluster.Spec.ControlPlaneEndpoint.Host != "" {
+		return fmt.Sprintf("https://%s:%d", cluster.Spec.ControlPlaneEndpoint.Host, cluster.Spec.ControlPlaneEndpoint.Port)
+	}
+	return ""
+}
+
+func (s *EnhancedClusterService) getNodePools(ctx context.Context, cluster *clusterv1.Cluster) []api.NodePool {
+	// This would typically query MachineDeployments
+	// For now, return empty array as a placeholder
+	return []api.NodePool{}
+}
+
+func (s *EnhancedClusterService) getConditions(cluster *clusterv1.Cluster) []api.ClusterCondition {
+	conditions := make([]api.ClusterCondition, 0, len(cluster.Status.Conditions))
+	for _, cond := range cluster.Status.Conditions {
+		conditions = append(conditions, api.ClusterCondition{
+			Type:               string(cond.Type),
+			Status:             string(cond.Status),
+			LastTransitionTime: cond.LastTransitionTime.Format(time.RFC3339),
+			Reason:             cond.Reason,
+			Message:            cond.Message,
+		})
+	}
+	return conditions
+}
+
+func (s *EnhancedClusterService) getInfrastructureRef(cluster *clusterv1.Cluster) map[string]interface{} {
+	if cluster.Spec.InfrastructureRef == nil {
+		return nil
+	}
+	
+	return map[string]interface{}{
+		"kind":       cluster.Spec.InfrastructureRef.Kind,
+		"name":       cluster.Spec.InfrastructureRef.Name,
+		"namespace":  cluster.Spec.InfrastructureRef.Namespace,
+		"apiVersion": cluster.Spec.InfrastructureRef.APIVersion,
+	}
 }

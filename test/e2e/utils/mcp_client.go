@@ -309,18 +309,29 @@ func (c *MCPClient) WaitForClusterReady(ctx context.Context, clusterName string,
 		
 		c.logger.Debug("Cluster status check via MCP",
 			"cluster", clusterName,
-			"phase", cluster.Status.Phase,
-			"controlPlaneReady", cluster.Status.ControlPlaneReady,
-			"infrastructureReady", cluster.Status.InfrastructureReady)
+			"status", cluster.Cluster.Status)
 		
-		if cluster.Status.Phase == "Provisioned" &&
-			cluster.Status.ControlPlaneReady &&
-			cluster.Status.InfrastructureReady {
+		// Check conditions for readiness indication
+		controlPlaneReady := false
+		infrastructureReady := false
+		
+		for _, condition := range cluster.Cluster.Conditions {
+			if condition.Type == "ControlPlaneReady" && condition.Status == "True" {
+				controlPlaneReady = true
+			}
+			if condition.Type == "InfrastructureReady" && condition.Status == "True" {
+				infrastructureReady = true
+			}
+		}
+		
+		if cluster.Cluster.Status == "Ready" &&
+			controlPlaneReady &&
+			infrastructureReady {
 			c.logger.Info("Cluster is ready via MCP", "cluster", clusterName)
 			return nil
 		}
 		
-		if cluster.Status.Phase == "Failed" {
+		if cluster.Cluster.Status == "Failed" {
 			return fmt.Errorf("cluster failed to provision: %s", clusterName)
 		}
 		

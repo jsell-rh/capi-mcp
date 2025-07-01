@@ -156,6 +156,17 @@ func (c *Client) UpdateMachineDeployment(ctx context.Context, md *clusterv1.Mach
 	return nil
 }
 
+// ListMachineDeployments lists all MachineDeployments for a cluster.
+func (c *Client) ListMachineDeployments(ctx context.Context, clusterName string) (*clusterv1.MachineDeploymentList, error) {
+	mdList := &clusterv1.MachineDeploymentList{}
+	if err := c.client.List(ctx, mdList, client.InNamespace(c.namespace), client.MatchingLabels{
+		clusterv1.ClusterNameLabel: clusterName,
+	}); err != nil {
+		return nil, fmt.Errorf("failed to list machine deployments: %w", err)
+	}
+	return mdList, nil
+}
+
 // GetKubeconfigSecret retrieves the kubeconfig secret for a cluster.
 func (c *Client) GetKubeconfigSecret(ctx context.Context, clusterName string) (*corev1.Secret, error) {
 	// The kubeconfig secret name follows the pattern: <cluster-name>-kubeconfig

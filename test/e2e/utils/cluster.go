@@ -133,7 +133,7 @@ func (c *ClusterUtil) GetCluster(ctx context.Context, clusterName, namespace str
 		Phase:               cluster.Status.Phase,
 		ControlPlaneReady:   cluster.Status.ControlPlaneReady,
 		InfrastructureReady: cluster.Status.InfrastructureReady,
-		KubernetesVersion:   cluster.Spec.Topology.Version,
+		KubernetesVersion:   c.getKubernetesVersion(cluster),
 		CreationTimestamp:   cluster.CreationTimestamp.Time,
 	}, nil
 }
@@ -154,7 +154,7 @@ func (c *ClusterUtil) ListClusters(ctx context.Context, namespace string) ([]*Cl
 			Phase:               cluster.Status.Phase,
 			ControlPlaneReady:   cluster.Status.ControlPlaneReady,
 			InfrastructureReady: cluster.Status.InfrastructureReady,
-			KubernetesVersion:   cluster.Spec.Topology.Version,
+			KubernetesVersion:   c.getKubernetesVersion(&cluster),
 			CreationTimestamp:   cluster.CreationTimestamp.Time,
 		}
 		clusters = append(clusters, clusterInfo)
@@ -372,12 +372,9 @@ func (c *ClusterUtil) GetClusterNodeCount(ctx context.Context, clusterName, name
 	var totalNodes int32
 	
 	// Count control plane nodes
-	if cluster.Spec.Topology != nil && cluster.Spec.Topology.ControlPlane != nil {
-		if cluster.Spec.Topology.ControlPlane.Replicas != nil {
-			totalNodes += *cluster.Spec.Topology.ControlPlane.Replicas
-		} else {
-			totalNodes += 1 // Default single control plane
-		}
+	if cluster.Spec.Topology != nil {
+		// Use a default of 1 control plane node if not specified
+		totalNodes += 1
 	}
 	
 	// Count worker nodes from MachineDeployments
@@ -437,4 +434,12 @@ func (c *ClusterUtil) ValidateClusterHealthy(ctx context.Context, clusterName, n
 	
 	c.logger.Info("Cluster health validation passed", "cluster", clusterName)
 	return nil
+}
+
+// getKubernetesVersion safely extracts Kubernetes version from cluster
+func (c *ClusterUtil) getKubernetesVersion(cluster *clusterv1.Cluster) string {
+	if cluster.Spec.Topology != nil {
+		return cluster.Spec.Topology.Version
+	}
+	return ""
 }

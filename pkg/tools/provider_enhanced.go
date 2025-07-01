@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	api "github.com/capi-mcp/capi-mcp-server/api/v1"
 	"github.com/capi-mcp/capi-mcp-server/internal/errors"
@@ -16,88 +15,35 @@ import (
 
 // EnhancedProvider handles MCP tool registration and execution with enhanced error handling.
 type EnhancedProvider struct {
-	mcpServer      *mcp.Server
 	logger         *logging.Logger
 	clusterService interface{} // Can be either ClusterService or EnhancedClusterService
 	validator      *validation.Validator
 }
 
 // NewEnhancedProvider creates a new enhanced tool provider instance.
-func NewEnhancedProvider(mcpServer *mcp.Server, logger *logging.Logger, clusterService interface{}) *EnhancedProvider {
+func NewEnhancedProvider(logger *logging.Logger, clusterService interface{}) *EnhancedProvider {
 	return &EnhancedProvider{
-		mcpServer:      mcpServer,
 		logger:         logger.WithComponent("tools"),
 		clusterService: clusterService,
 		validator:      validation.NewValidator(),
 	}
 }
 
-// RegisterTools registers all available tools with the MCP server with enhanced error handling.
-func (p *EnhancedProvider) RegisterTools() error {
-	logger := p.logger.WithOperation("RegisterTools")
-	logger.Info("Registering MCP tools")
-	
-	tools := map[string]struct {
-		handler mcp.ToolFunc
-		schema  interface{}
-		desc    string
-	}{
-		"list_clusters": {
-			handler: p.wrapToolHandler("list_clusters", p.handleListClusters),
-			schema:  api.ListClustersInput{},
-			desc:    "Lists all managed Kubernetes clusters and their current status",
-		},
-		"get_cluster": {
-			handler: p.wrapToolHandler("get_cluster", p.handleGetCluster),
-			schema:  api.GetClusterInput{},
-			desc:    "Gets detailed information about a specific cluster",
-		},
-		"create_cluster": {
-			handler: p.wrapToolHandler("create_cluster", p.handleCreateCluster),
-			schema:  api.CreateClusterInput{},
-			desc:    "Creates a new Kubernetes cluster from a pre-defined template",
-		},
-		"delete_cluster": {
-			handler: p.wrapToolHandler("delete_cluster", p.handleDeleteCluster),
-			schema:  api.DeleteClusterInput{},
-			desc:    "Deletes a Kubernetes cluster and all its resources",
-		},
-		"scale_cluster": {
-			handler: p.wrapToolHandler("scale_cluster", p.handleScaleCluster),
-			schema:  api.ScaleClusterInput{},
-			desc:    "Scales the number of worker nodes in a cluster",
-		},
-		"get_cluster_kubeconfig": {
-			handler: p.wrapToolHandler("get_cluster_kubeconfig", p.handleGetClusterKubeconfig),
-			schema:  api.GetClusterKubeconfigInput{},
-			desc:    "Retrieves the kubeconfig file for connecting to a cluster",
-		},
-		"get_cluster_nodes": {
-			handler: p.wrapToolHandler("get_cluster_nodes", p.handleGetClusterNodes),
-			schema:  api.GetClusterNodesInput{},
-			desc:    "Lists all nodes in a specific cluster with their status",
-		},
+// GetSupportedTools returns a list of supported tools for this provider.
+func (p *EnhancedProvider) GetSupportedTools() []string {
+	return []string{
+		"list_clusters",
+		"get_cluster", 
+		"create_cluster",
+		"delete_cluster",
+		"scale_cluster",
+		"get_cluster_kubeconfig",
+		"get_cluster_nodes",
 	}
-	
-	// Register each tool
-	registeredCount := 0
-	for name, tool := range tools {
-		if err := p.mcpServer.RegisterTool(name, tool.desc, tool.schema, tool.handler); err != nil {
-			logger.WithError(err).Error("Failed to register tool", 
-				logging.FieldTool, name,
-			)
-			return errors.Wrap(err, errors.CodeInternal, fmt.Sprintf("failed to register tool %s", name))
-		}
-		registeredCount++
-		logger.Debug("Registered tool", logging.FieldTool, name)
-	}
-	
-	logger.Info("Successfully registered all tools", "count", registeredCount)
-	return nil
 }
 
 // wrapToolHandler wraps a tool handler with logging and error handling
-func (p *EnhancedProvider) wrapToolHandler(toolName string, handler func(context.Context, map[string]interface{}) (interface{}, error)) mcp.ToolFunc {
+func (p *EnhancedProvider) wrapToolHandler(toolName string, handler func(context.Context, map[string]interface{}) (interface{}, error)) func(context.Context, map[string]interface{}) (map[string]interface{}, error) {
 	return func(ctx context.Context, input map[string]interface{}) (map[string]interface{}, error) {
 		// Add tool context to logger
 		toolLogger := p.logger.WithContext(ctx).With(
@@ -105,9 +51,13 @@ func (p *EnhancedProvider) wrapToolHandler(toolName string, handler func(context
 		)
 		
 		// Log tool invocation
-		result, err := toolLogger.LogToolCall(ctx, toolName, input, func() (interface{}, error) {
-			return handler(ctx, input)
-		})
+		toolLogger.Info("Tool invocation started")
+		result, err := handler(ctx, input)
+		if err != nil {
+			p.logger.WithError(err).Error("Tool invocation failed", logging.FieldTool, toolName)
+		} else {
+			toolLogger.Info("Tool invocation completed")
+		}
 		
 		if err != nil {
 			// Return user-friendly error
@@ -429,7 +379,8 @@ func (p *EnhancedProvider) validateClusterNameFromInput(input map[string]interfa
 	if !ok {
 		return errors.New(errors.CodeInvalidInput, 
 			"clusterName is required and must be a string").
-			WithDetails("field", "clusterName", "provided_type", fmt.Sprintf("%T", input["clusterName"]))
+			WithDetails("field", "clusterName").
+			WithDetails("provided_type", fmt.Sprintf("%T", input["clusterName"]))
 	}
 	
 	if err := p.validator.ValidateClusterName(clusterName); err != nil {
@@ -453,13 +404,13 @@ func convertToMap(v interface{}) (map[string]interface{}, error) {
 	case *api.GetClusterOutput:
 		return map[string]interface{}{
 			"cluster":        val.Cluster,
-			"providerStatus": val.ProviderStatus,
+			// Note: ProviderStatus removed from API structure
 		}, nil
 	case *api.CreateClusterOutput:
 		return map[string]interface{}{
-			"success": val.Success,
-			"cluster": val.Cluster,
-			"message": val.Message,
+			"cluster_name": val.ClusterName,
+			"status":       val.Status,
+			"message":      val.Message,
 		}, nil
 	case *api.DeleteClusterOutput:
 		return map[string]interface{}{
