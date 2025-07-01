@@ -98,7 +98,7 @@ jobs:
           
       - name: Run Go security checker
         run: |
-          go install github.com/securecodewarrior/gosec/cmd/gosec@latest
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
           gosec -quiet ./...
 
   # Optional E2E tests - only run if specifically requested or on main branch
