@@ -12,6 +12,7 @@ import (
 	"github.com/capi-mcp/capi-mcp-server/internal/errors"
 	"github.com/capi-mcp/capi-mcp-server/internal/kube"
 	"github.com/capi-mcp/capi-mcp-server/internal/logging"
+	"github.com/capi-mcp/capi-mcp-server/internal/metrics"
 	"github.com/capi-mcp/capi-mcp-server/internal/middleware"
 	"github.com/capi-mcp/capi-mcp-server/internal/service"
 	"github.com/capi-mcp/capi-mcp-server/pkg/provider"
@@ -21,9 +22,10 @@ import (
 
 // EnhancedServer represents the CAPI MCP server with enhanced error handling and logging.
 type EnhancedServer struct {
-	config    *config.Config
-	logger    *logging.Logger
-	mcpServer *mcp.Server
+	config           *config.Config
+	logger           *logging.Logger
+	mcpServer        *mcp.Server
+	metricsCollector *metrics.Collector
 }
 
 // NewEnhanced creates a new server instance with enhanced error handling and logging.
@@ -32,13 +34,20 @@ func NewEnhanced(cfg *config.Config) (*EnhancedServer, error) {
 		return nil, errors.New(errors.CodeInvalidInput, "config is required")
 	}
 	
-	// Create logger from config
+	// Create metrics collector
+	metricsCollector := metrics.NewCollector()
+	
+	// Set server information metrics
+	metricsCollector.SetServerInfo(cfg.Version, cfg.BuildDate, "go1.23")
+	
+	// Create logger from config with metrics integration
 	logLevel := logging.ParseLevel(cfg.LogLevel)
-	logger := logging.NewLogger(logLevel, "json").WithComponent("server")
+	logger := logging.NewLoggerWithMetrics(logLevel, "json", metricsCollector).WithComponent("server")
 	
 	logger.Info("Initializing CAPI MCP Server",
 		"version", cfg.Version,
 		"log_level", cfg.LogLevel,
+		"metrics_port", cfg.MetricsPort,
 	)
 
 	// Create MCP server instance with metadata
@@ -46,7 +55,8 @@ func NewEnhanced(cfg *config.Config) (*EnhancedServer, error) {
 
 	// Create server instance
 	s := &EnhancedServer{
-		config:    cfg,
+		config:           cfg,
+		metricsCollector: metricsCollector,
 		logger:    logger,
 		mcpServer: mcpServer,
 	}
@@ -271,18 +281,13 @@ func (s *EnhancedServer) startMetricsServer(ctx context.Context) error {
 		return nil
 	}
 	
-	s.logger.Info("Starting metrics server", "port", s.config.MetricsPort)
+	metricsAddr := fmt.Sprintf(":%d", s.config.MetricsPort)
 	
-	// TODO: Implement metrics server with Prometheus
-	// - Request metrics
-	// - Tool execution metrics
-	// - Kubernetes API call metrics
-	// - Provider operation metrics
+	s.logger.Info("Starting metrics server", 
+		"port", s.config.MetricsPort,
+		"addr", metricsAddr,
+	)
 	
-	// For now, just log that it's not implemented
-	s.logger.Warn("Metrics server not yet implemented")
-	
-	// Block until context is cancelled
-	<-ctx.Done()
-	return nil
+	// Start metrics server - this will block until context is cancelled
+	return metrics.StartMetricsServer(ctx, metricsAddr, s.logger.Logger)
 }

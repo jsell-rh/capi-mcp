@@ -52,6 +52,21 @@ const (
 // Logger wraps slog.Logger with additional functionality
 type Logger struct {
 	*slog.Logger
+	metricsCollector MetricsCollector
+}
+
+// MetricsCollector interface for recording metrics alongside logs
+type MetricsCollector interface {
+	IncRequestsTotal(tool, status string)
+	ObserveRequestDuration(tool, status string, duration time.Duration)
+	IncActiveRequests(tool string)
+	DecActiveRequests(tool string)
+	IncToolInvocations(tool, status string)
+	ObserveToolExecutionDuration(tool string, duration time.Duration)
+	IncToolErrors(tool, errorCode string)
+	IncKubernetesAPICalls(operation, status string)
+	ObserveKubernetesAPICallDuration(operation string, duration time.Duration)
+	IncKubernetesAPIErrors(operation, errorCode string)
 }
 
 // contextKey is a custom type for context keys
@@ -65,6 +80,11 @@ const (
 
 // NewLogger creates a new logger with the specified configuration
 func NewLogger(level slog.Level, format string) *Logger {
+	return NewLoggerWithMetrics(level, format, nil)
+}
+
+// NewLoggerWithMetrics creates a new logger with metrics collection
+func NewLoggerWithMetrics(level slog.Level, format string, metricsCollector MetricsCollector) *Logger {
 	var handler slog.Handler
 	
 	opts := &slog.HandlerOptions{
@@ -94,7 +114,8 @@ func NewLogger(level slog.Level, format string) *Logger {
 	}
 	
 	return &Logger{
-		Logger: slog.New(handler),
+		Logger:           slog.New(handler),
+		metricsCollector: metricsCollector,
 	}
 }
 
@@ -119,7 +140,8 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 			args[i] = attr
 		}
 		return &Logger{
-			Logger: l.Logger.With(args...),
+			Logger:           l.Logger.With(args...),
+			metricsCollector: l.metricsCollector,
 		}
 	}
 	
@@ -129,14 +151,16 @@ func (l *Logger) WithContext(ctx context.Context) *Logger {
 // WithComponent returns a logger for a specific component
 func (l *Logger) WithComponent(component string) *Logger {
 	return &Logger{
-		Logger: l.Logger.With(slog.String(FieldComponent, component)),
+		Logger:           l.Logger.With(slog.String(FieldComponent, component)),
+		metricsCollector: l.metricsCollector,
 	}
 }
 
 // WithOperation returns a logger for a specific operation
 func (l *Logger) WithOperation(operation string) *Logger {
 	return &Logger{
-		Logger: l.Logger.With(slog.String(FieldOperation, operation)),
+		Logger:           l.Logger.With(slog.String(FieldOperation, operation)),
+		metricsCollector: l.metricsCollector,
 	}
 }
 
@@ -147,6 +171,7 @@ func (l *Logger) WithCluster(clusterName, namespace string) *Logger {
 			slog.String(FieldClusterName, clusterName),
 			slog.String(FieldClusterNamespace, namespace),
 		),
+		metricsCollector: l.metricsCollector,
 	}
 }
 
@@ -158,6 +183,7 @@ func (l *Logger) WithResource(kind, name, namespace string) *Logger {
 			slog.String(FieldResourceName, name),
 			slog.String(FieldNamespace, namespace),
 		),
+		metricsCollector: l.metricsCollector,
 	}
 }
 
@@ -183,7 +209,8 @@ func (l *Logger) WithError(err error) *Logger {
 	}
 	
 	return &Logger{
-		Logger: l.Logger.With(args...),
+		Logger:           l.Logger.With(args...),
+		metricsCollector: l.metricsCollector,
 	}
 }
 
@@ -221,7 +248,7 @@ func (l *Logger) LogOperation(ctx context.Context, operation string, fn func() e
 	return err
 }
 
-// LogToolCall logs MCP tool invocations
+// LogToolCall logs MCP tool invocations with metrics collection
 func (l *Logger) LogToolCall(ctx context.Context, toolName string, input interface{}, fn func() (interface{}, error)) (interface{}, error) {
 	startTime := time.Now()
 	
@@ -230,6 +257,13 @@ func (l *Logger) LogToolCall(ctx context.Context, toolName string, input interfa
 			slog.String(FieldTool, toolName),
 			slog.Any(FieldToolInput, input),
 		),
+		metricsCollector: l.metricsCollector,
+	}
+	
+	// Track active request if metrics available
+	if l.metricsCollector != nil {
+		l.metricsCollector.IncActiveRequests(toolName)
+		defer l.metricsCollector.DecActiveRequests(toolName)
 	}
 	
 	toolLogger.Info("Tool invocation started")
@@ -248,9 +282,19 @@ func (l *Logger) LogToolCall(ctx context.Context, toolName string, input interfa
 		fieldArgs[i] = field
 	}
 
+	status := "success"
 	if err != nil {
-		errorLogger := &Logger{Logger: toolLogger.Logger.With(slog.String(FieldError, err.Error()))}
+		status = "error"
+		errorLogger := &Logger{
+			Logger: toolLogger.Logger.With(slog.String(FieldError, err.Error())),
+			metricsCollector: l.metricsCollector,
+		}
 		errorLogger.Error("Tool invocation failed", fieldArgs...)
+		
+		// Record error metrics
+		if l.metricsCollector != nil {
+			l.metricsCollector.IncToolErrors(toolName, "unknown") // TODO: Extract error code
+		}
 	} else {
 		successFields := append(fields, slog.Any(FieldToolOutput, output))
 		successArgs := make([]any, len(successFields))
@@ -260,7 +304,50 @@ func (l *Logger) LogToolCall(ctx context.Context, toolName string, input interfa
 		toolLogger.Info("Tool invocation completed", successArgs...)
 	}
 	
+	// Record metrics
+	if l.metricsCollector != nil {
+		l.metricsCollector.IncToolInvocations(toolName, status)
+		l.metricsCollector.ObserveToolExecutionDuration(toolName, duration)
+		l.metricsCollector.IncRequestsTotal(toolName, status)
+		l.metricsCollector.ObserveRequestDuration(toolName, status, duration)
+	}
+	
 	return output, err
+}
+
+// LogKubernetesOperation logs Kubernetes API operations with metrics collection
+func (l *Logger) LogKubernetesOperation(ctx context.Context, operation string, fn func() error) error {
+	startTime := time.Now()
+	
+	opLogger := l.WithContext(ctx).WithOperation(operation)
+	opLogger.Debug("Kubernetes operation started")
+	
+	err := fn()
+	
+	duration := time.Since(startTime)
+	
+	status := "success"
+	if err != nil {
+		status = "error"
+		opLogger.WithError(err).Error("Kubernetes operation failed", 
+			slog.Int64(FieldDuration, duration.Milliseconds()))
+		
+		// Record error metrics
+		if l.metricsCollector != nil {
+			l.metricsCollector.IncKubernetesAPIErrors(operation, "unknown") // TODO: Extract error code
+		}
+	} else {
+		opLogger.Debug("Kubernetes operation completed", 
+			slog.Int64(FieldDuration, duration.Milliseconds()))
+	}
+	
+	// Record metrics
+	if l.metricsCollector != nil {
+		l.metricsCollector.IncKubernetesAPICalls(operation, status)
+		l.metricsCollector.ObserveKubernetesAPICallDuration(operation, duration)
+	}
+	
+	return err
 }
 
 // Context management functions
@@ -276,7 +363,10 @@ func LoggerFromContext(ctx context.Context) *Logger {
 		return logger
 	}
 	// Return default logger if not found
-	return &Logger{Logger: slog.Default()}
+	return &Logger{
+		Logger:           slog.Default(),
+		metricsCollector: nil,
+	}
 }
 
 // LoggerToContext adds a logger to the context (alias for ContextWithLogger)
@@ -330,8 +420,17 @@ func MaskSensitive(value string, showChars int) string {
 		return "***"
 	}
 	
+	if len(value) == 0 {
+		return "***"
+	}
+	
+	// If string is shorter than or equal to showChars, mask it for security
+	// unless showChars is much larger than the string (indicating we want to see it all)
 	if len(value) <= showChars {
-		return value // Return the whole string if it's shorter than showChars
+		if showChars > len(value)*2 { // Much larger than string, show all
+			return value
+		}
+		return "***" // Close to string length, mask for security
 	}
 	
 	return value[:showChars] + "***"
