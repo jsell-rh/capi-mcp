@@ -127,6 +127,12 @@ jobs:
           chmod +x ./kind
           sudo mv ./kind /usr/local/bin/kind
           
+      - name: Install clusterctl
+        run: |
+          curl -L https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/clusterctl-linux-amd64 -o clusterctl
+          chmod +x ./clusterctl
+          sudo mv ./clusterctl /usr/local/bin/clusterctl
+          
       - name: Create kind cluster
         run: |
           kind create cluster --name e2e-test
@@ -134,7 +140,7 @@ jobs:
           
       - name: Run E2E tests
         run: |
-          export KUBECONFIG="$(kind get kubeconfig-path --name='e2e-test')"
+          export KUBECONFIG="$(kind get kubeconfig --name='e2e-test')"
           go test -v -tags=e2e ./test/e2e/... -timeout=30m
           
       - name: Cleanup
