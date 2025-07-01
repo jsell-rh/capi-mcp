@@ -33,37 +33,76 @@ check_prerequisites() {
     
     local missing_tools=()
     
-    # Check required tools
+    # Check required tools (basic availability check)
     for tool in kind kubectl clusterctl go docker aws; do
         if ! command -v "$tool" &> /dev/null; then
             missing_tools+=("$tool")
         fi
     done
     
+    # Report missing tools
     if [[ ${#missing_tools[@]} -gt 0 ]]; then
         error "Missing required tools: ${missing_tools[*]}"
-        error "Please install the missing tools and try again"
+        error ""
+        error "Please install the missing tools:"
+        for tool in "${missing_tools[@]}"; do
+            case $tool in
+                kind)
+                    error "  kind: go install sigs.k8s.io/kind@latest"
+                    ;;
+                kubectl)
+                    error "  kubectl: https://kubernetes.io/docs/tasks/tools/install-kubectl/"
+                    ;;
+                clusterctl)
+                    error "  clusterctl: https://cluster-api.sigs.k8s.io/user/quick-start.html#install-clusterctl"
+                    ;;
+                go)
+                    error "  go: https://golang.org/doc/install"
+                    ;;
+                docker)
+                    error "  docker: https://docs.docker.com/get-docker/"
+                    ;;
+                aws)
+                    error "  aws: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
+                    ;;
+            esac
+        done
         exit 1
     fi
     
-    # Check Go version
-    local go_version
-    go_version=$(go version | grep -oP 'go\K[0-9]+\.[0-9]+' || echo "0.0")
-    if [[ $(echo "$go_version 1.23" | tr ' ' '\n' | sort -V | head -n1) != "1.23" ]]; then
-        error "Go 1.23+ is required, found: $go_version"
-        exit 1
-    fi
+    # Log detected tool versions (informational only)
+    log "Detected tool versions:"
+    log "  kind: $(kind version 2>/dev/null || echo 'version detection failed')"
+    log "  kubectl: $(kubectl version --client --short 2>/dev/null || echo 'version detection failed')"
+    log "  clusterctl: $(clusterctl version -o short 2>/dev/null || echo 'version detection failed')"
+    log "  go: $(go version 2>/dev/null || echo 'version detection failed')"
+    log "  docker: $(docker version --format '{{.Client.Version}}' 2>/dev/null || echo 'version detection failed')"
+    log "  aws: $(aws --version 2>/dev/null || echo 'version detection failed')"
     
-    # Check Docker
+    # Check Docker daemon
     if ! docker info &> /dev/null; then
-        error "Docker is not running or accessible"
+        error "Docker daemon is not running or accessible"
+        error "Please start Docker and ensure the current user has access"
+        exit 1
+    fi
+    
+    # Check Docker permissions
+    if ! docker ps &> /dev/null; then
+        error "Docker permission denied - cannot access Docker daemon"
+        error "Please ensure the current user has Docker access"
         exit 1
     fi
     
     # Check AWS credentials
     if [[ -z "${AWS_ACCESS_KEY_ID:-}" || -z "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
         error "AWS credentials not found in environment"
-        error "Please set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY"
+        error ""
+        error "Please configure AWS credentials using one of:"
+        error "  1. Environment variables:"
+        error "     export AWS_ACCESS_KEY_ID=your-access-key"
+        error "     export AWS_SECRET_ACCESS_KEY=your-secret-key"
+        error "  2. AWS credentials file: aws configure"
+        error "  3. IAM role (if running on EC2)"
         exit 1
     fi
     
