@@ -315,3 +315,126 @@ func (c *ClusterUtil) GetDefaultClusterClass(ctx context.Context, namespace stri
 	
 	return &classes[0], nil
 }
+
+// WaitForClusterPhase waits for a cluster to reach a specific phase
+func (c *ClusterUtil) WaitForClusterPhase(ctx context.Context, clusterName, namespace, expectedPhase string, timeout time.Duration) error {
+	c.logger.Info("Waiting for cluster phase",
+		"cluster", clusterName,
+		"namespace", namespace,
+		"expectedPhase", expectedPhase,
+		"timeout", timeout)
+	
+	return wait.PollUntilContextTimeout(ctx, 15*time.Second, timeout, false, func(ctx context.Context) (bool, error) {
+		cluster, err := c.GetCluster(ctx, clusterName, namespace)
+		if err != nil {
+			c.logger.Warn("Failed to get cluster while waiting for phase", "error", err)
+			return false, nil // Continue polling
+		}
+		
+		c.logger.Debug("Checking cluster phase",
+			"cluster", clusterName,
+			"currentPhase", cluster.Phase,
+			"expectedPhase", expectedPhase)
+		
+		if cluster.Phase == expectedPhase {
+			c.logger.Info("Cluster reached expected phase",
+				"cluster", clusterName,
+				"phase", expectedPhase)
+			return true, nil
+		}
+		
+		// Check if cluster failed
+		if cluster.Phase == string(clusterv1.ClusterPhaseFailed) {
+			return false, fmt.Errorf("cluster failed while waiting for phase %s: %s", expectedPhase, clusterName)
+		}
+		
+		return false, nil // Continue polling
+	})
+}
+
+// WaitForClusterDeletion waits for a cluster to be completely deleted
+func (c *ClusterUtil) WaitForClusterDeletion(ctx context.Context, clusterName, namespace string, timeout time.Duration) error {
+	return c.WaitForClusterDeleted(ctx, clusterName, namespace, timeout)
+}
+
+// GetClusterNodeCount returns the total number of nodes (control plane + workers) for a cluster
+func (c *ClusterUtil) GetClusterNodeCount(ctx context.Context, clusterName, namespace string) (int32, error) {
+	cluster := &clusterv1.Cluster{}
+	err := c.client.Get(ctx, types.NamespacedName{
+		Name:      clusterName,
+		Namespace: namespace,
+	}, cluster)
+	
+	if err != nil {
+		return 0, fmt.Errorf("failed to get cluster %s/%s: %w", namespace, clusterName, err)
+	}
+	
+	var totalNodes int32
+	
+	// Count control plane nodes
+	if cluster.Spec.Topology != nil && cluster.Spec.Topology.ControlPlane != nil {
+		if cluster.Spec.Topology.ControlPlane.Replicas != nil {
+			totalNodes += *cluster.Spec.Topology.ControlPlane.Replicas
+		} else {
+			totalNodes += 1 // Default single control plane
+		}
+	}
+	
+	// Count worker nodes from MachineDeployments
+	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Workers != nil {
+		for _, md := range cluster.Spec.Topology.Workers.MachineDeployments {
+			if md.Replicas != nil {
+				totalNodes += *md.Replicas
+			}
+		}
+	}
+	
+	return totalNodes, nil
+}
+
+// ValidateClusterHealthy checks that a cluster is healthy and all nodes are ready
+func (c *ClusterUtil) ValidateClusterHealthy(ctx context.Context, clusterName, namespace string) error {
+	c.logger.Info("Validating cluster health", "cluster", clusterName, "namespace", namespace)
+	
+	// Get cluster info
+	cluster, err := c.GetCluster(ctx, clusterName, namespace)
+	if err != nil {
+		return fmt.Errorf("failed to get cluster: %w", err)
+	}
+	
+	// Check cluster phase
+	if cluster.Phase != string(clusterv1.ClusterPhaseProvisioned) {
+		return fmt.Errorf("cluster is not in Provisioned phase: %s", cluster.Phase)
+	}
+	
+	// Check control plane readiness
+	if !cluster.ControlPlaneReady {
+		return fmt.Errorf("control plane is not ready")
+	}
+	
+	// Check infrastructure readiness
+	if !cluster.InfrastructureReady {
+		return fmt.Errorf("infrastructure is not ready")
+	}
+	
+	// Check MachineDeployments
+	mds, err := c.GetMachineDeployments(ctx, clusterName, namespace)
+	if err != nil {
+		return fmt.Errorf("failed to get MachineDeployments: %w", err)
+	}
+	
+	for _, md := range mds {
+		if md.Spec.Replicas == nil {
+			continue
+		}
+		
+		expectedReplicas := *md.Spec.Replicas
+		if md.Status.ReadyReplicas != expectedReplicas {
+			return fmt.Errorf("MachineDeployment %s has %d ready replicas, expected %d",
+				md.Name, md.Status.ReadyReplicas, expectedReplicas)
+		}
+	}
+	
+	c.logger.Info("Cluster health validation passed", "cluster", clusterName)
+	return nil
+}

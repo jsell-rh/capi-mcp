@@ -1,0 +1,313 @@
+apiVersion: cluster.x-k8s.io/v1beta1
+kind: ClusterClass
+metadata:
+  name: aws-cluster-template
+  namespace: default
+spec:
+  controlPlane:
+    ref:
+      apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+      kind: KubeadmControlPlaneTemplate
+      name: aws-control-plane-template
+    machineInfrastructure:
+      ref:
+        kind: AWSMachineTemplate
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        name: aws-control-plane-machine-template
+  infrastructure:
+    ref:
+      apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+      kind: AWSClusterTemplate
+      name: aws-cluster-template
+  workers:
+    machineDeployments:
+    - class: default-worker
+      template:
+        bootstrap:
+          ref:
+            apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+            kind: KubeadmConfigTemplate
+            name: aws-worker-bootstrap-template
+        infrastructure:
+          ref:
+            apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+            kind: AWSMachineTemplate
+            name: aws-worker-machine-template
+  variables:
+  - name: region
+    required: true
+    schema:
+      openAPIV3Schema:
+        type: string
+        enum:
+        - us-east-1
+        - us-east-2
+        - us-west-1
+        - us-west-2
+        - eu-west-1
+        - eu-central-1
+        - ap-southeast-1
+        - ap-northeast-1
+  - name: nodeCount
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 2
+  - name: controlPlaneInstanceType
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        enum:
+        - t3.medium
+        - t3.large
+        - m5.large
+        - m5.xlarge
+        default: t3.medium
+  - name: workerInstanceType
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        enum:
+        - t3.small
+        - t3.medium
+        - t3.large
+        - m5.large
+        default: t3.small
+  - name: sshKeyName
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+  - name: vpcCIDR
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'
+        default: "10.0.0.0/16"
+  - name: subnetCIDR
+    required: false
+    schema:
+      openAPIV3Schema:
+        type: string
+        pattern: '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]{1,2}$'
+        default: "10.0.1.0/24"
+  patches:
+  - name: region
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSClusterTemplate
+        matchResources:
+          infrastructureCluster: true
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/region
+        valueFrom:
+          variable: region
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        matchResources:
+          controlPlane: true
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/ami/id
+        value: ami-0c02fb55956c7d316  # Amazon Linux 2 LTS (us-west-2)
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - default-worker
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/ami/id
+        value: ami-0c02fb55956c7d316  # Amazon Linux 2 LTS (us-west-2)
+  - name: controlPlaneInstanceType
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        matchResources:
+          controlPlane: true
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/instanceType
+        valueFrom:
+          variable: controlPlaneInstanceType
+  - name: workerInstanceType
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - default-worker
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/instanceType
+        valueFrom:
+          variable: workerInstanceType
+  - name: sshKeyName
+    enabledIf: "{{ if .sshKeyName }}true{{ end }}"
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        matchResources:
+          controlPlane: true
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/sshKeyName
+        valueFrom:
+          variable: sshKeyName
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSMachineTemplate
+        matchResources:
+          machineDeploymentClass:
+            names:
+            - default-worker
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/sshKeyName
+        valueFrom:
+          variable: sshKeyName
+  - name: vpc
+    definitions:
+    - selector:
+        apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+        kind: AWSClusterTemplate
+        matchResources:
+          infrastructureCluster: true
+      jsonPatches:
+      - op: add
+        path: /spec/template/spec/network/vpc/cidrBlock
+        valueFrom:
+          variable: vpcCIDR
+      - op: add
+        path: /spec/template/spec/network/subnets
+        value:
+        - availabilityZone: a
+          cidrBlock:
+            valueFrom:
+              variable: subnetCIDR
+          isPublic: true
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSClusterTemplate
+metadata:
+  name: aws-cluster-template
+  namespace: default
+spec:
+  template:
+    spec:
+      region: us-west-2
+      network:
+        vpc:
+          enableDnsHostnames: true
+          enableDnsSupport: true
+        cni:
+          cniIngressRules:
+          - description: "bgp (calico)"
+            protocol: tcp
+            fromPort: 179
+            toPort: 179
+          - description: "IP-in-IP (calico)"
+            protocol: "4"
+            fromPort: -1
+            toPort: -1
+---
+apiVersion: controlplane.cluster.x-k8s.io/v1beta1
+kind: KubeadmControlPlaneTemplate
+metadata:
+  name: aws-control-plane-template
+  namespace: default
+spec:
+  template:
+    spec:
+      kubeadmConfigSpec:
+        clusterConfiguration:
+          apiServer:
+            timeoutForControlPlane: 20m
+          controllerManager:
+            extraArgs:
+              enable-hostpath-provisioner: "true"
+          etcd:
+            local:
+              dataDir: /var/lib/etcddisk/etcd
+              extraArgs:
+                quota-backend-bytes: "8589934592"
+        initConfiguration:
+          nodeRegistration:
+            name: "{{ ds.meta_data.local_hostname }}"
+            kubeletExtraArgs:
+              cloud-provider: aws
+        joinConfiguration:
+          nodeRegistration:
+            name: "{{ ds.meta_data.local_hostname }}"
+            kubeletExtraArgs:
+              cloud-provider: aws
+        preKubeadmCommands:
+        - hostname "{{ ds.meta_data.local_hostname }}"
+        - echo "{{ ds.meta_data.local_hostname }}" >/etc/hostname
+        useExperimentalRetryJoin: true
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: aws-control-plane-machine-template
+  namespace: default
+spec:
+  template:
+    spec:
+      instanceType: t3.medium
+      ami:
+        lookupType: AmiNameSearch
+        amiNameSearchQuery: "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
+        owner: "099720109477" # Canonical
+      iamInstanceProfile: control-plane.cluster-api-provider-aws.sigs.k8s.io
+      cloudInit:
+        insecureSkipSecretsManager: true
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: AWSMachineTemplate
+metadata:
+  name: aws-worker-machine-template
+  namespace: default
+spec:
+  template:
+    spec:
+      instanceType: t3.small
+      ami:
+        lookupType: AmiNameSearch
+        amiNameSearchQuery: "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
+        owner: "099720109477" # Canonical
+      iamInstanceProfile: nodes.cluster-api-provider-aws.sigs.k8s.io
+      cloudInit:
+        insecureSkipSecretsManager: true
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta1
+kind: KubeadmConfigTemplate
+metadata:
+  name: aws-worker-bootstrap-template
+  namespace: default
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          name: "{{ ds.meta_data.local_hostname }}"
+          kubeletExtraArgs:
+            cloud-provider: aws
+      preKubeadmCommands:
+      - hostname "{{ ds.meta_data.local_hostname }}"
+      - echo "{{ ds.meta_data.local_hostname }}" >/etc/hostname
