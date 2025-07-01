@@ -24,6 +24,9 @@ type Config struct {
 	// CAPI configuration
 	ClusterTimeout time.Duration `json:"cluster_timeout"`
 	
+	// Provider configuration
+	Providers map[string]map[string]string `json:"providers"`
+	
 	// Observability
 	LogLevel     string `json:"log_level"`
 	MetricsPort  int    `json:"metrics_port"`
@@ -48,6 +51,7 @@ func Load() (*Config, error) {
 		EnablePprof:   getEnvBool("ENABLE_PPROF", false),
 		Version:       getEnv("VERSION", "dev"),
 		BuildDate:     getEnv("BUILD_DATE", "unknown"),
+		Providers:     make(map[string]map[string]string),
 	}
 	
 	// Required configuration

@@ -2,13 +2,11 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/capi-mcp/capi-mcp-server/test/e2e/utils"
 )
@@ -128,7 +126,6 @@ func testValidateAWSClusterProvisioning(t *testing.T, ctx context.Context, mcpCl
 	require.NoError(t, err, "Cluster should reach Provisioning phase")
 	
 	// Validate AWS infrastructure is being created
-	region := awsUtil.GetRegion()
 	
 	// Check for VPC creation
 	logger.Info("Checking for VPC creation")

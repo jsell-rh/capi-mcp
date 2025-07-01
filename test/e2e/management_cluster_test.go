@@ -10,8 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -149,7 +147,6 @@ func TestManagementClusterStability(t *testing.T) {
 	defer cancel()
 	
 	t.Run("repeated api calls", func(t *testing.T) {
-		kubeClient := GetKubeClient()
 		clusterUtil := GetClusterUtil()
 		
 		// Make repeated API calls to test stability
@@ -222,7 +219,7 @@ func TestManagementClusterResources(t *testing.T) {
 			// Check that CRD is established
 			established := false
 			for _, condition := range crd.Status.Conditions {
-				if condition.Type == apiextensionsv1.Established && condition.Status == metav1.ConditionTrue {
+				if condition.Type == apiextensionsv1.Established && condition.Status == apiextensionsv1.ConditionTrue {
 					established = true
 					break
 				}

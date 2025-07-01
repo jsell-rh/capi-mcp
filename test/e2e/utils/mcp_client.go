@@ -220,6 +220,21 @@ func (c *MCPClient) GetClusterNodes(ctx context.Context, clusterName string) (*v
 	return &response, nil
 }
 
+// CallTool makes a generic tool call to the MCP server and returns the response as a map
+func (c *MCPClient) CallTool(ctx context.Context, toolName string, parameters interface{}) (map[string]interface{}, error) {
+	request := MCPToolRequest{
+		Tool:       toolName,
+		Parameters: parameters,
+	}
+	
+	var response map[string]interface{}
+	if err := c.callTool(ctx, request, &response); err != nil {
+		return nil, fmt.Errorf("%s failed: %w", toolName, err)
+	}
+	
+	return response, nil
+}
+
 // callTool makes a generic tool call to the MCP server
 func (c *MCPClient) callTool(ctx context.Context, request MCPToolRequest, response interface{}) error {
 	// Serialize request
