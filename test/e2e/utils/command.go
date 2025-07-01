@@ -36,13 +36,13 @@ func NewCommand(name string, args ...string) *Command {
 func (c *Command) RunWithContext(ctx context.Context) error {
 	c.cmd = exec.CommandContext(ctx, c.name, c.args...)
 	c.setupCmd()
-	
+
 	fmt.Printf("Executing: %s %s\n", c.name, strings.Join(c.args, " "))
-	
+
 	if err := c.cmd.Run(); err != nil {
 		return fmt.Errorf("command failed: %s %s: %w", c.name, strings.Join(c.args, " "), err)
 	}
-	
+
 	return nil
 }
 
@@ -57,13 +57,13 @@ func (c *Command) Run() error {
 func (c *Command) StartBackground() error {
 	c.cmd = exec.Command(c.name, c.args...)
 	c.setupCmd()
-	
+
 	fmt.Printf("Starting background: %s %s\n", c.name, strings.Join(c.args, " "))
-	
+
 	if err := c.cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start background command: %s %s: %w", c.name, strings.Join(c.args, " "), err)
 	}
-	
+
 	return nil
 }
 
@@ -72,11 +72,11 @@ func (c *Command) Wait() error {
 	if c.cmd == nil {
 		return fmt.Errorf("command not started")
 	}
-	
+
 	if err := c.cmd.Wait(); err != nil {
 		return fmt.Errorf("background command failed: %s %s: %w", c.name, strings.Join(c.args, " "), err)
 	}
-	
+
 	return nil
 }
 
@@ -85,11 +85,11 @@ func (c *Command) Kill() error {
 	if c.cmd == nil || c.cmd.Process == nil {
 		return nil
 	}
-	
+
 	if err := c.cmd.Process.Kill(); err != nil {
 		return fmt.Errorf("failed to kill command: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -97,17 +97,17 @@ func (c *Command) Kill() error {
 func (c *Command) RunWithOutput(ctx context.Context) (string, error) {
 	c.cmd = exec.CommandContext(ctx, c.name, c.args...)
 	c.setupCmd()
-	
+
 	// Override stdout to capture output
 	c.cmd.Stdout = nil
-	
+
 	fmt.Printf("Executing (with output): %s %s\n", c.name, strings.Join(c.args, " "))
-	
+
 	output, err := c.cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("command failed: %s %s: %w", c.name, strings.Join(c.args, " "), err)
 	}
-	
+
 	return strings.TrimSpace(string(output)), nil
 }
 
@@ -116,23 +116,23 @@ func (c *Command) setupCmd() {
 	if c.cmd == nil {
 		return
 	}
-	
+
 	if c.Env != nil {
 		c.cmd.Env = c.Env
 	}
-	
+
 	if c.Dir != "" {
 		c.cmd.Dir = c.Dir
 	}
-	
+
 	if c.Stdin != nil {
 		c.cmd.Stdin = c.Stdin
 	}
-	
+
 	if c.Stdout != nil {
 		c.cmd.Stdout = c.Stdout
 	}
-	
+
 	if c.Stderr != nil {
 		c.cmd.Stderr = c.Stderr
 	}

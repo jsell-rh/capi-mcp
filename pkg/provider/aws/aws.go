@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // AWSProvider implements the Provider interface for Amazon Web Services.
@@ -23,7 +23,7 @@ func NewAWSProvider(region string) *AWSProvider {
 	if region == "" {
 		region = "us-west-2" // Default region
 	}
-	
+
 	return &AWSProvider{
 		region: region,
 	}
@@ -115,7 +115,7 @@ func (p *AWSProvider) ValidateInfrastructureReadiness(ctx context.Context, clust
 
 	// Verify it's an AWS infrastructure type
 	if cluster.Spec.InfrastructureRef.Kind != "AWSCluster" {
-		return fmt.Errorf("cluster %s infrastructure is not an AWSCluster (got %s)", 
+		return fmt.Errorf("cluster %s infrastructure is not an AWSCluster (got %s)",
 			cluster.Name, cluster.Spec.InfrastructureRef.Kind)
 	}
 
@@ -203,11 +203,11 @@ func (p *AWSProvider) GetInstanceTypes(ctx context.Context, region string) ([]st
 		"t3.micro", "t3.small", "t3.medium", "t3.large", "t3.xlarge", "t3.2xlarge",
 		"m5.large", "m5.xlarge", "m5.2xlarge", "m5.4xlarge", "m5.8xlarge", "m5.12xlarge",
 		"m6i.large", "m6i.xlarge", "m6i.2xlarge", "m6i.4xlarge", "m6i.8xlarge",
-		
+
 		// Compute Optimized
 		"c5.large", "c5.xlarge", "c5.2xlarge", "c5.4xlarge", "c5.9xlarge", "c5.18xlarge",
 		"c6i.large", "c6i.xlarge", "c6i.2xlarge", "c6i.4xlarge", "c6i.8xlarge",
-		
+
 		// Memory Optimized
 		"r5.large", "r5.xlarge", "r5.2xlarge", "r5.4xlarge", "r5.8xlarge", "r5.12xlarge",
 		"r6i.large", "r6i.xlarge", "r6i.2xlarge", "r6i.4xlarge", "r6i.8xlarge",
@@ -267,9 +267,9 @@ func (p *AWSProvider) isValidInstanceType(instanceType string) bool {
 	}
 
 	// Basic validation - first part should be family+generation, second part should be size
-	validSizes := []string{"nano", "micro", "small", "medium", "large", "xlarge", "2xlarge", 
+	validSizes := []string{"nano", "micro", "small", "medium", "large", "xlarge", "2xlarge",
 		"3xlarge", "4xlarge", "8xlarge", "9xlarge", "12xlarge", "16xlarge", "18xlarge", "24xlarge"}
-	
+
 	for _, size := range validSizes {
 		if parts[1] == size {
 			return true

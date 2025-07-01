@@ -88,17 +88,17 @@ current-context: test-cluster`),
 func setupTestService() *ClusterService {
 	kubeClient := &kube.Client{} // Mock client for unit tests
 	logger := slog.New(slog.NewTextHandler(nil, &slog.HandlerOptions{Level: slog.LevelError}))
-	
+
 	// Create mock provider manager for tests
 	providerManager := provider.NewProviderManager()
-	
+
 	// For these tests, we'll test the business logic parts that don't require the client
 	return NewClusterService(kubeClient, logger, providerManager)
 }
 
 func TestClusterService_ListClusters(t *testing.T) {
 	service := setupTestService()
-	
+
 	// We need to test this with a proper mock or interface
 	// For now, let's test the helper functions
 	t.Run("estimateNodeCount", func(t *testing.T) {
@@ -118,7 +118,7 @@ func TestClusterService_ListClusters(t *testing.T) {
 				},
 			},
 		}
-		
+
 		count := service.estimateNodeCount(cluster)
 		assert.Equal(t, 5, count)
 	})
@@ -129,7 +129,7 @@ func TestClusterService_ListClusters(t *testing.T) {
 				Topology: &clusterv1.Topology{},
 			},
 		}
-		
+
 		count := service.estimateNodeCount(cluster)
 		assert.Equal(t, 0, count)
 	})
@@ -138,7 +138,7 @@ func TestClusterService_ListClusters(t *testing.T) {
 		cluster := &clusterv1.Cluster{
 			Spec: clusterv1.ClusterSpec{},
 		}
-		
+
 		count := service.estimateNodeCount(cluster)
 		assert.Equal(t, 0, count)
 	})
@@ -279,7 +279,7 @@ func TestValidateInputs(t *testing.T) {
 			TemplateName:      "aws-template",
 			KubernetesVersion: "v1.31.0",
 			Variables: map[string]interface{}{
-				"region": "us-west-2",
+				"region":       "us-west-2",
 				"instanceType": "m5.large",
 			},
 		}
@@ -304,9 +304,9 @@ func TestValidateInputs(t *testing.T) {
 func TestCreateClusterVariableMarshaling(t *testing.T) {
 	t.Run("marshal complex variables", func(t *testing.T) {
 		variables := map[string]interface{}{
-			"region": "us-west-2",
+			"region":       "us-west-2",
 			"instanceType": "m5.large",
-			"nodeCount": 3,
+			"nodeCount":    3,
 			"config": map[string]interface{}{
 				"networking": map[string]interface{}{
 					"cidr": "10.0.0.0/16",
@@ -329,22 +329,22 @@ func TestCreateClusterVariableMarshaling(t *testing.T) {
 
 func TestTimeoutCalculation(t *testing.T) {
 	tests := []struct {
-		name            string
-		contextTimeout  time.Duration
+		name             string
+		contextTimeout   time.Duration
 		operationTimeout time.Duration
-		expectImmediate bool
+		expectImmediate  bool
 	}{
 		{
-			name:            "context already has deadline",
-			contextTimeout:  5 * time.Minute,
+			name:             "context already has deadline",
+			contextTimeout:   5 * time.Minute,
 			operationTimeout: 10 * time.Minute,
-			expectImmediate: true,
+			expectImmediate:  true,
 		},
 		{
-			name:            "no context deadline",
-			contextTimeout:  0, // No deadline
+			name:             "no context deadline",
+			contextTimeout:   0, // No deadline
 			operationTimeout: 10 * time.Minute,
-			expectImmediate: false,
+			expectImmediate:  false,
 		},
 	}
 

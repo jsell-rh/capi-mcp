@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 func TestNewAWSProvider(t *testing.T) {
@@ -38,7 +38,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 			"instanceType": "m5.large",
 			"nodeCount":    3,
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.NoError(t, err)
 	})
@@ -49,7 +49,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 			"instanceType": "m5.large",
 			"nodeCount":    float64(3),
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.NoError(t, err)
 	})
@@ -58,7 +58,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"region": "invalid-region",
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid AWS region")
@@ -68,7 +68,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"region": 123,
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "region must be a string")
@@ -78,7 +78,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"instanceType": "invalid-type",
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid AWS instance type")
@@ -88,7 +88,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"instanceType": 123,
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "instanceType must be a string")
@@ -98,7 +98,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"nodeCount": 0,
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "nodeCount must be between 1 and 100")
@@ -108,7 +108,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"nodeCount": 101,
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "nodeCount must be between 1 and 100")
@@ -118,7 +118,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"nodeCount": 3.5,
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "nodeCount must be an integer")
@@ -128,7 +128,7 @@ func TestAWSProvider_ValidateClusterConfig(t *testing.T) {
 		variables := map[string]interface{}{
 			"nodeCount": "three",
 		}
-		
+
 		err := provider.ValidateClusterConfig(ctx, variables)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "nodeCount must be an integer")
@@ -142,13 +142,13 @@ func TestAWSProvider_GetSupportedKubernetesVersions(t *testing.T) {
 	versions, err := provider.GetSupportedKubernetesVersions(ctx)
 	require.NoError(t, err)
 	assert.NotEmpty(t, versions)
-	
+
 	// Check that versions are in expected format
 	for _, version := range versions {
 		assert.True(t, len(version) > 0)
 		assert.True(t, version[0] == 'v') // Should start with 'v'
 	}
-	
+
 	// Check for some expected versions
 	assert.Contains(t, versions, "v1.31.0")
 	assert.Contains(t, versions, "v1.30.5")
@@ -290,7 +290,7 @@ func TestAWSProvider_GetProviderSpecificStatus(t *testing.T) {
 
 		status, err := provider.GetProviderSpecificStatus(ctx, cluster)
 		require.NoError(t, err)
-		
+
 		assert.Equal(t, "AWSCluster", status["infrastructureKind"])
 		assert.Equal(t, "test-aws-cluster", status["infrastructureName"])
 		assert.Equal(t, "us-east-1", status["region"])
@@ -316,7 +316,7 @@ func TestAWSProvider_GetProviderSpecificStatus(t *testing.T) {
 
 		status, err := provider.GetProviderSpecificStatus(ctx, cluster)
 		require.NoError(t, err)
-		
+
 		assert.Equal(t, "AWSCluster", status["infrastructureKind"])
 		assert.Equal(t, "test-aws-cluster", status["infrastructureName"])
 		assert.Equal(t, "us-west-2", status["region"]) // Should use provider default

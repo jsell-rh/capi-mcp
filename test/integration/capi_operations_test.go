@@ -82,7 +82,7 @@ func TestCAPIResourceOperations(t *testing.T) {
 		// Create test resources
 		clusterClass := createTestClusterClass()
 		cluster := createTestCluster("test-cluster", suite.namespace, clusterv1.ClusterPhaseProvisioning)
-		
+
 		suite.SetupWithResources(t, clusterClass, cluster)
 
 		// Test cluster retrieval
@@ -99,7 +99,7 @@ func TestCAPIResourceOperations(t *testing.T) {
 		retrievedCluster.Status.Phase = string(clusterv1.ClusterPhaseProvisioned)
 		retrievedCluster.Status.ControlPlaneReady = true
 		retrievedCluster.Status.InfrastructureReady = true
-		
+
 		err = suite.client.Status().Update(ctx, &retrievedCluster)
 		require.NoError(t, err)
 
@@ -130,7 +130,7 @@ func TestCAPIResourceOperations(t *testing.T) {
 		// Create test resources
 		cluster := createTestCluster("md-cluster", suite.namespace, clusterv1.ClusterPhaseProvisioned)
 		machineDeployment := createTestMachineDeployment("md-cluster-workers", suite.namespace, "md-cluster", 3)
-		
+
 		suite.SetupWithResources(t, cluster, machineDeployment)
 
 		// Test machine deployment retrieval
@@ -146,7 +146,7 @@ func TestCAPIResourceOperations(t *testing.T) {
 		// Test scaling operation
 		newReplicas := int32(5)
 		retrievedMD.Spec.Replicas = &newReplicas
-		
+
 		err = suite.client.Update(ctx, &retrievedMD)
 		require.NoError(t, err)
 
@@ -162,7 +162,7 @@ func TestCAPIResourceOperations(t *testing.T) {
 		// Simulate status update (as controller would do)
 		scaledMD.Status.UpdatedReplicas = newReplicas
 		scaledMD.Status.ReadyReplicas = newReplicas
-		
+
 		err = suite.client.Status().Update(ctx, &scaledMD)
 		require.NoError(t, err)
 
@@ -181,7 +181,7 @@ func TestCAPIResourceOperations(t *testing.T) {
 		// Create test resources
 		cluster := createTestCluster("secret-cluster", suite.namespace, clusterv1.ClusterPhaseProvisioned)
 		kubeconfigSecret := createTestKubeconfigSecret("secret-cluster", suite.namespace)
-		
+
 		suite.SetupWithResources(t, cluster, kubeconfigSecret)
 
 		// Test secret retrieval
@@ -231,7 +231,7 @@ current-context: secret-cluster`
 	t.Run("cluster class operations", func(t *testing.T) {
 		// Create test resources
 		clusterClass := createTestClusterClass()
-		
+
 		suite.SetupWithResources(t, clusterClass)
 
 		// Test cluster class retrieval
@@ -265,7 +265,7 @@ func TestAdvancedCAPIOperations(t *testing.T) {
 		cluster1 := createTestCluster("cluster-1", suite.namespace, clusterv1.ClusterPhaseProvisioned)
 		cluster2 := createTestCluster("cluster-2", suite.namespace, clusterv1.ClusterPhaseProvisioning)
 		cluster3 := createTestCluster("cluster-3", suite.namespace, clusterv1.ClusterPhaseFailed)
-		
+
 		suite.SetupWithResources(t, clusterClass, cluster1, cluster2, cluster3)
 
 		// Test listing all clusters
@@ -306,12 +306,12 @@ func TestAdvancedCAPIOperations(t *testing.T) {
 		cluster := createTestCluster("multi-md-cluster", suite.namespace, clusterv1.ClusterPhaseProvisioned)
 		workerMD := createTestMachineDeployment("multi-md-cluster-workers", suite.namespace, "multi-md-cluster", 3)
 		infraMD := createTestMachineDeployment("multi-md-cluster-infra", suite.namespace, "multi-md-cluster", 2)
-		
+
 		suite.SetupWithResources(t, cluster, workerMD, infraMD)
 
 		// Test listing machine deployments for cluster
 		var mdList clusterv1.MachineDeploymentList
-		err := suite.client.List(ctx, &mdList, 
+		err := suite.client.List(ctx, &mdList,
 			client.InNamespace(suite.namespace),
 			client.MatchingLabels{clusterv1.ClusterNameLabel: "multi-md-cluster"})
 		require.NoError(t, err)
@@ -329,14 +329,14 @@ func TestAdvancedCAPIOperations(t *testing.T) {
 			currentReplicas := *mdList.Items[i].Spec.Replicas
 			newReplicas := currentReplicas + 1
 			mdList.Items[i].Spec.Replicas = &newReplicas
-			
+
 			err = suite.client.Update(ctx, &mdList.Items[i])
 			require.NoError(t, err)
 		}
 
 		// Verify scaling
 		var updatedMDList clusterv1.MachineDeploymentList
-		err = suite.client.List(ctx, &updatedMDList, 
+		err = suite.client.List(ctx, &updatedMDList,
 			client.InNamespace(suite.namespace),
 			client.MatchingLabels{clusterv1.ClusterNameLabel: "multi-md-cluster"})
 		require.NoError(t, err)
@@ -353,7 +353,7 @@ func TestAdvancedCAPIOperations(t *testing.T) {
 		cluster := createTestCluster("deletion-cluster", suite.namespace, clusterv1.ClusterPhaseProvisioned)
 		machineDeployment := createTestMachineDeployment("deletion-cluster-md", suite.namespace, "deletion-cluster", 3)
 		kubeconfigSecret := createTestKubeconfigSecret("deletion-cluster", suite.namespace)
-		
+
 		suite.SetupWithResources(t, cluster, machineDeployment, kubeconfigSecret)
 
 		// Verify resources exist

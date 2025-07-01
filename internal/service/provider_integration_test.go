@@ -79,7 +79,7 @@ func TestProviderIntegration(t *testing.T) {
 
 			prov, exists := providerManager.GetProvider("aws")
 			require.True(t, exists)
-			
+
 			err := prov.ValidateClusterConfig(ctx, variables)
 			assert.NoError(t, err)
 		})
@@ -91,7 +91,7 @@ func TestProviderIntegration(t *testing.T) {
 
 			prov, exists := providerManager.GetProvider("aws")
 			require.True(t, exists)
-			
+
 			err := prov.ValidateClusterConfig(ctx, variables)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid AWS region")
@@ -105,7 +105,7 @@ func TestProviderIntegration(t *testing.T) {
 
 			prov, exists := providerManager.GetProvider("aws")
 			require.True(t, exists)
-			
+
 			err := prov.ValidateClusterConfig(ctx, variables)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "invalid AWS instance type")
@@ -119,7 +119,7 @@ func TestProviderIntegration(t *testing.T) {
 
 			prov, exists := providerManager.GetProvider("aws")
 			require.True(t, exists)
-			
+
 			err := prov.ValidateClusterConfig(ctx, variables)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "nodeCount must be between 1 and 100")

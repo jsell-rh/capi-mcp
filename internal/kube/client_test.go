@@ -65,7 +65,7 @@ func TestListClusters(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, clusters)
 	assert.Len(t, clusters.Items, 2)
-	
+
 	// Check cluster names
 	names := []string{clusters.Items[0].Name, clusters.Items[1].Name}
 	assert.Contains(t, names, "cluster-1")
@@ -327,18 +327,18 @@ func TestHelperFunctions(t *testing.T) {
 	t.Run("IsClusterReady", func(t *testing.T) {
 		readyCluster := &clusterv1.Cluster{
 			Status: clusterv1.ClusterStatus{
-				Phase:                string(clusterv1.ClusterPhaseProvisioned),
-				ControlPlaneReady:    true,
-				InfrastructureReady:  true,
+				Phase:               string(clusterv1.ClusterPhaseProvisioned),
+				ControlPlaneReady:   true,
+				InfrastructureReady: true,
 			},
 		}
 		assert.True(t, IsClusterReady(readyCluster))
 
 		notReadyCluster := &clusterv1.Cluster{
 			Status: clusterv1.ClusterStatus{
-				Phase:                string(clusterv1.ClusterPhaseProvisioning),
-				ControlPlaneReady:    false,
-				InfrastructureReady:  true,
+				Phase:               string(clusterv1.ClusterPhaseProvisioning),
+				ControlPlaneReady:   false,
+				InfrastructureReady: true,
 			},
 		}
 		assert.False(t, IsClusterReady(notReadyCluster))
@@ -374,7 +374,7 @@ func TestHelperFunctions(t *testing.T) {
 				},
 			},
 		}
-		
+
 		message := GetClusterFailureMessage(cluster)
 		assert.Contains(t, message, "TestFailure")
 		assert.Contains(t, message, "Test failure message")

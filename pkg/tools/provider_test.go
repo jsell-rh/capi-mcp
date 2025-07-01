@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/capi-mcp/capi-mcp-server/internal/service"
 )
@@ -22,11 +22,11 @@ func createTestProvider(clusterService *service.ClusterService) *Provider {
 func TestNewProvider(t *testing.T) {
 	server := mcp.NewServer("test-server", "v1.0.0", nil)
 	logger := slog.New(slog.NewTextHandler(nil, &slog.HandlerOptions{Level: slog.LevelError}))
-	
+
 	t.Run("with cluster service", func(t *testing.T) {
 		clusterService := &service.ClusterService{}
 		provider := NewProvider(server, logger, clusterService)
-		
+
 		assert.NotNil(t, provider)
 		assert.Equal(t, server, provider.server)
 		assert.Equal(t, logger, provider.logger)
@@ -35,7 +35,7 @@ func TestNewProvider(t *testing.T) {
 
 	t.Run("with nil cluster service", func(t *testing.T) {
 		provider := NewProvider(server, logger, nil)
-		
+
 		assert.NotNil(t, provider)
 		assert.Nil(t, provider.clusterService)
 	})
@@ -43,10 +43,10 @@ func TestNewProvider(t *testing.T) {
 
 func TestRegisterTools(t *testing.T) {
 	provider := createTestProvider(nil)
-	
+
 	err := provider.RegisterTools()
 	assert.NoError(t, err)
-	
+
 	// The actual tool registration is handled by the MCP server
 	// We can't easily test it without more complex mocking
 }
@@ -54,16 +54,16 @@ func TestRegisterTools(t *testing.T) {
 func TestHandleListClusters(t *testing.T) {
 	t.Run("with nil cluster service", func(t *testing.T) {
 		provider := createTestProvider(nil)
-		
+
 		ctx := context.Background()
 		session := &mcp.ServerSession{}
 		params := &mcp.CallToolParamsFor[ListClustersArgs]{}
-		
+
 		result, err := provider.handleListClusters(ctx, session, params)
 		require.NoError(t, err)
 		assert.NotNil(t, result)
 		assert.Len(t, result.Content, 1)
-		
+
 		textContent, ok := result.Content[0].(*mcp.TextContent)
 		require.True(t, ok)
 		assert.Contains(t, textContent.Text, "service not initialized")
@@ -73,7 +73,7 @@ func TestHandleListClusters(t *testing.T) {
 func TestHandleGetCluster(t *testing.T) {
 	t.Run("with nil cluster service", func(t *testing.T) {
 		provider := createTestProvider(nil)
-		
+
 		ctx := context.Background()
 		session := &mcp.ServerSession{}
 		params := &mcp.CallToolParamsFor[GetClusterArgs]{
@@ -81,7 +81,7 @@ func TestHandleGetCluster(t *testing.T) {
 				ClusterName: "test-cluster",
 			},
 		}
-		
+
 		_, err := provider.handleGetCluster(ctx, session, params)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "service not initialized")
@@ -221,7 +221,7 @@ func TestJSONMarshaling(t *testing.T) {
 				"region": "us-west-2",
 				"config": map[string]interface{}{
 					"networking": map[string]interface{}{
-						"cidr": "10.0.0.0/16",
+						"cidr":    "10.0.0.0/16",
 						"subnets": []string{"10.0.1.0/24", "10.0.2.0/24"},
 					},
 				},
@@ -240,7 +240,7 @@ func TestJSONMarshaling(t *testing.T) {
 		assert.Equal(t, args.ClusterName, unmarshaled.ClusterName)
 		assert.Equal(t, args.TemplateName, unmarshaled.TemplateName)
 		assert.Equal(t, args.KubernetesVersion, unmarshaled.KubernetesVersion)
-		
+
 		// Check complex nested variables
 		assert.Equal(t, "us-west-2", unmarshaled.Variables["region"])
 		assert.Equal(t, float64(3), unmarshaled.Variables["replicas"]) // JSON unmarshals numbers as float64

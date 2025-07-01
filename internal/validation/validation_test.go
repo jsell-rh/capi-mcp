@@ -77,7 +77,7 @@ func TestValidator_ValidateClusterName(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := v.ValidateClusterName(tt.input)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -155,7 +155,7 @@ func TestValidator_ValidateKubernetesVersion(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := v.ValidateKubernetesVersion(tt.input)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -207,7 +207,7 @@ func TestValidator_ValidateReplicaCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := v.ValidateReplicaCount(tt.input)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -303,7 +303,7 @@ func TestValidator_ValidateClusterVariables(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := v.ValidateClusterVariables(tt.input)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -355,7 +355,7 @@ func TestValidator_ValidateIPAddress(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := v.ValidateIPAddress(tt.input)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -412,7 +412,7 @@ func TestValidator_ValidatePort(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := v.ValidatePort(tt.input)
-			
+
 			if tt.expectError {
 				if err == nil {
 					t.Error("Expected error but got none")
@@ -558,11 +558,11 @@ func TestToInt32(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, valid := toInt32(tt.input)
-			
+
 			if valid != tt.expectValid {
 				t.Errorf("toInt32() valid = %v, want %v", valid, tt.expectValid)
 			}
-			
+
 			if tt.expectValid && got != tt.expected {
 				t.Errorf("toInt32() value = %v, want %v", got, tt.expected)
 			}

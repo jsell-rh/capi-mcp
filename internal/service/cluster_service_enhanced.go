@@ -40,34 +40,34 @@ func NewEnhancedClusterService(kubeClient *kube.Client, logger *logging.Logger, 
 func (s *EnhancedClusterService) ListClusters(ctx context.Context) (*api.ListClustersOutput, error) {
 	logger := s.logger.WithContext(ctx).WithOperation("ListClusters")
 	logger.Debug("Listing all clusters")
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		logger.Warn("Kubernetes client not initialized")
 		return &api.ListClustersOutput{Clusters: []api.ClusterSummary{}}, nil
 	}
-	
+
 	// List clusters with timeout
 	listCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	clusters, err := s.kubeClient.ListClusters(listCtx)
 	if err != nil {
 		logger.WithError(err).Error("Failed to list clusters from Kubernetes API")
-		
+
 		// Check if it's a timeout
 		if errors.IsTimeout(err) {
 			return nil, errors.Wrap(err, errors.CodeTimeout, "timeout listing clusters")
 		}
-		
+
 		// Check if it's an auth error
 		if apierrors.IsUnauthorized(err) || apierrors.IsForbidden(err) {
 			return nil, errors.Wrap(err, errors.CodeUnauthorized, "unauthorized to list clusters")
 		}
-		
+
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to list clusters")
 	}
-	
+
 	summaries := make([]api.ClusterSummary, 0, len(clusters.Items))
 	for _, cluster := range clusters.Items {
 		summary := api.ClusterSummary{
@@ -78,12 +78,12 @@ func (s *EnhancedClusterService) ListClusters(ctx context.Context) (*api.ListClu
 			KubernetesVersion: "",
 			NodeCount:         0,
 		}
-		
+
 		// Extract Kubernetes version safely
 		if cluster.Spec.Topology != nil {
 			summary.KubernetesVersion = cluster.Spec.Topology.Version
 		}
-		
+
 		// Count nodes by listing MachineDeployments
 		nodeCount, err := s.getClusterNodeCount(listCtx, cluster.Name, cluster.Namespace)
 		if err != nil {
@@ -94,10 +94,10 @@ func (s *EnhancedClusterService) ListClusters(ctx context.Context) (*api.ListClu
 		} else {
 			summary.NodeCount = int(nodeCount)
 		}
-		
+
 		summaries = append(summaries, summary)
 	}
-	
+
 	logger.Info("Listed clusters successfully", "count", len(summaries))
 	return &api.ListClustersOutput{Clusters: summaries}, nil
 }
@@ -106,40 +106,40 @@ func (s *EnhancedClusterService) ListClusters(ctx context.Context) (*api.ListClu
 func (s *EnhancedClusterService) GetCluster(ctx context.Context, input api.GetClusterInput) (*api.GetClusterOutput, error) {
 	logger := s.logger.WithContext(ctx).WithOperation("GetCluster").WithCluster(input.ClusterName, "")
 	logger.Debug("Getting cluster details")
-	
+
 	// Validate input
 	if input.ClusterName == "" {
 		err := errors.New(errors.CodeInvalidInput, "cluster name is required")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		err := errors.New(errors.CodeUnavailable, "Kubernetes client not initialized")
 		logger.WithError(err).Error("Service unavailable")
 		return nil, err
 	}
-	
+
 	// Get cluster with timeout
 	getCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	cluster, err := s.kubeClient.GetClusterByName(getCtx, input.ClusterName)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster")
-		
+
 		if apierrors.IsNotFound(err) {
 			return nil, errors.New(errors.CodeNotFound, fmt.Sprintf("cluster '%s' not found", input.ClusterName))
 		}
-		
+
 		if errors.IsTimeout(err) {
 			return nil, errors.Wrap(err, errors.CodeTimeout, "timeout getting cluster")
 		}
-		
+
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to get cluster")
 	}
-	
+
 	// Build response
 	output := &api.GetClusterOutput{
 		Cluster: api.ClusterDetails{
@@ -156,9 +156,9 @@ func (s *EnhancedClusterService) GetCluster(ctx context.Context, input api.GetCl
 			InfrastructureRef: s.getInfrastructureRef(cluster),
 		},
 	}
-	
+
 	// Provider-specific status can be included in the InfrastructureRef field if needed
-	
+
 	logger.Info("Retrieved cluster successfully")
 	return output, nil
 }
@@ -170,20 +170,20 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 		"template", input.TemplateName,
 		"kubernetes_version", input.KubernetesVersion,
 	)
-	
+
 	// Validate input
 	if err := s.validateCreateClusterInput(input); err != nil {
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		err := errors.New(errors.CodeUnavailable, "Kubernetes client not initialized")
 		logger.WithError(err).Error("Service unavailable")
 		return nil, err
 	}
-	
+
 	// Extract provider name and validate with provider
 	providerName := s.extractProviderName(input.Variables, input.TemplateName)
 	if s.providerManager != nil {
@@ -195,7 +195,7 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 			}
 		}
 	}
-	
+
 	// Get ClusterClass
 	clusterClass, err := s.kubeClient.GetClusterClass(ctx, input.TemplateName)
 	if err != nil {
@@ -205,7 +205,7 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 		}
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to get cluster template")
 	}
-	
+
 	// Check if cluster already exists
 	existingCluster, err := s.kubeClient.GetClusterByName(ctx, input.ClusterName)
 	if err == nil && existingCluster != nil {
@@ -213,22 +213,22 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 		logger.WithError(err).Error("Cluster already exists")
 		return nil, err
 	}
-	
+
 	// Create cluster resource
 	cluster := s.buildClusterResource(input, clusterClass)
-	
+
 	logger.Info("Creating cluster resource in Kubernetes")
 	err = s.kubeClient.CreateCluster(ctx, cluster)
 	if err != nil {
 		logger.WithError(err).Error("Failed to create cluster resource")
-		
+
 		if apierrors.IsAlreadyExists(err) {
 			return nil, errors.New(errors.CodeAlreadyExists, fmt.Sprintf("cluster '%s' already exists", input.ClusterName))
 		}
-		
+
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to create cluster")
 	}
-	
+
 	// Wait for initial status
 	logger.Debug("Waiting for cluster initial status")
 	finalCluster, err := s.waitForClusterPhase(ctx, cluster.Name, cluster.Namespace, 2*time.Minute)
@@ -237,18 +237,18 @@ func (s *EnhancedClusterService) CreateCluster(ctx context.Context, input api.Cr
 		// Return created cluster anyway
 		finalCluster = cluster
 	}
-	
+
 	output := &api.CreateClusterOutput{
 		ClusterName: finalCluster.Name,
 		Status:      s.normalizeClusterStatus(finalCluster.Status.Phase),
 		Message:     fmt.Sprintf("Cluster '%s' creation initiated successfully", input.ClusterName),
 	}
-	
+
 	logger.Info("Cluster created successfully",
 		"phase", finalCluster.Status.Phase,
 		logging.FieldDuration, time.Since(finalCluster.CreationTimestamp.Time).Milliseconds(),
 	)
-	
+
 	return output, nil
 }
 
@@ -259,7 +259,7 @@ func (s *EnhancedClusterService) normalizeClusterStatus(phase string) string {
 	if phase == "" {
 		return "Unknown"
 	}
-	
+
 	// Normalize common phases
 	switch strings.ToLower(phase) {
 	case "provisioning":
@@ -280,20 +280,20 @@ func (s *EnhancedClusterService) validateCreateClusterInput(input api.CreateClus
 	if input.ClusterName == "" {
 		return errors.New(errors.CodeInvalidInput, "cluster name is required")
 	}
-	
+
 	if input.TemplateName == "" {
 		return errors.New(errors.CodeInvalidInput, "template name is required")
 	}
-	
+
 	if input.KubernetesVersion == "" {
 		return errors.New(errors.CodeInvalidInput, "kubernetes version is required")
 	}
-	
+
 	// Validate cluster name format
 	if !isValidClusterName(input.ClusterName) {
 		return errors.New(errors.CodeInvalidInput, "cluster name must be a valid DNS subdomain")
 	}
-	
+
 	return nil
 }
 
@@ -302,19 +302,19 @@ func isValidClusterName(name string) bool {
 	if len(name) == 0 || len(name) > 63 {
 		return false
 	}
-	
+
 	// Must start and end with alphanumeric
 	if !isAlphaNumeric(name[0]) || !isAlphaNumeric(name[len(name)-1]) {
 		return false
 	}
-	
+
 	// Check all characters
 	for _, ch := range name {
 		if !isAlphaNumeric(byte(ch)) && ch != '-' {
 			return false
 		}
 	}
-	
+
 	return true
 }
 
@@ -328,17 +328,17 @@ func (s *EnhancedClusterService) getClusterNodeCount(ctx context.Context, cluste
 	if err != nil {
 		return 0, err
 	}
-	
+
 	var totalNodes int32
 	for _, md := range machineDeployments.Items {
 		if md.Spec.Replicas != nil {
 			totalNodes += *md.Spec.Replicas
 		}
 	}
-	
+
 	// Add control plane nodes (assuming single control plane for now)
 	totalNodes += 1
-	
+
 	return totalNodes, nil
 }
 
@@ -346,25 +346,25 @@ func (s *EnhancedClusterService) getClusterNodeCount(ctx context.Context, cluste
 func (s *EnhancedClusterService) DeleteCluster(ctx context.Context, input api.DeleteClusterInput) (*api.DeleteClusterOutput, error) {
 	logger := s.logger.WithContext(ctx).WithOperation("DeleteCluster").WithCluster(input.ClusterName, "")
 	logger.Info("Deleting cluster")
-	
+
 	// Validate input
 	if input.ClusterName == "" {
 		err := errors.New(errors.CodeInvalidInput, "cluster name is required")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		err := errors.New(errors.CodeUnavailable, "Kubernetes client not initialized")
 		logger.WithError(err).Error("Service unavailable")
 		return nil, err
 	}
-	
+
 	// Check if cluster exists first
 	deleteCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	cluster, err := s.kubeClient.GetClusterByName(deleteCtx, input.ClusterName)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get cluster before deletion")
@@ -373,19 +373,19 @@ func (s *EnhancedClusterService) DeleteCluster(ctx context.Context, input api.De
 		}
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to verify cluster exists")
 	}
-	
+
 	// Delete the cluster
 	logger.Info("Deleting cluster resource from Kubernetes")
 	if err := s.kubeClient.DeleteCluster(deleteCtx, input.ClusterName); err != nil {
 		logger.WithError(err).Error("Failed to delete cluster resource")
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to delete cluster")
 	}
-	
+
 	// Wait for deletion to complete (with timeout)
 	logger.Debug("Waiting for cluster deletion to complete")
 	waitCtx, waitCancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer waitCancel()
-	
+
 	err = s.waitForClusterDeleted(waitCtx, input.ClusterName, cluster.Namespace)
 	if err != nil {
 		logger.WithError(err).Warn("Failed to wait for cluster deletion completion")
@@ -395,7 +395,7 @@ func (s *EnhancedClusterService) DeleteCluster(ctx context.Context, input api.De
 			Message: fmt.Sprintf("Cluster '%s' deletion initiated (may still be in progress)", input.ClusterName),
 		}, nil
 	}
-	
+
 	logger.Info("Cluster deleted successfully")
 	return &api.DeleteClusterOutput{
 		Status:  "deleted",
@@ -410,37 +410,37 @@ func (s *EnhancedClusterService) ScaleCluster(ctx context.Context, input api.Sca
 		"node_pool", input.NodePoolName,
 		"target_replicas", input.Replicas,
 	)
-	
+
 	// Validate input
 	if input.ClusterName == "" {
 		err := errors.New(errors.CodeInvalidInput, "cluster name is required")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	if input.NodePoolName == "" {
 		err := errors.New(errors.CodeInvalidInput, "node pool name is required")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	if input.Replicas < 0 {
 		err := errors.New(errors.CodeInvalidInput, "replica count cannot be negative")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		err := errors.New(errors.CodeUnavailable, "Kubernetes client not initialized")
 		logger.WithError(err).Error("Service unavailable")
 		return nil, err
 	}
-	
+
 	// Get MachineDeployment with timeout
 	scaleCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	md, err := s.kubeClient.GetMachineDeployment(scaleCtx, input.ClusterName, input.NodePoolName)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get MachineDeployment")
@@ -449,15 +449,15 @@ func (s *EnhancedClusterService) ScaleCluster(ctx context.Context, input api.Sca
 		}
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to get node pool")
 	}
-	
+
 	// Get current replica count
 	oldReplicas := int32(0)
 	if md.Spec.Replicas != nil {
 		oldReplicas = *md.Spec.Replicas
 	}
-	
+
 	newReplicas := int32(input.Replicas)
-	
+
 	// Check if scaling is needed
 	if oldReplicas == newReplicas {
 		logger.Info("No scaling needed - already at target replica count")
@@ -468,20 +468,20 @@ func (s *EnhancedClusterService) ScaleCluster(ctx context.Context, input api.Sca
 			NewReplicas: input.Replicas,
 		}, nil
 	}
-	
+
 	// Update replica count
 	md.Spec.Replicas = &newReplicas
-	
+
 	logger.Info("Updating MachineDeployment replica count",
 		"old_replicas", oldReplicas,
 		"new_replicas", newReplicas,
 	)
-	
+
 	if err := s.kubeClient.UpdateMachineDeployment(scaleCtx, md); err != nil {
 		logger.WithError(err).Error("Failed to update MachineDeployment")
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to scale node pool")
 	}
-	
+
 	logger.Info("Cluster scaling initiated successfully")
 	return &api.ScaleClusterOutput{
 		Status:      "scaling",
@@ -495,25 +495,25 @@ func (s *EnhancedClusterService) ScaleCluster(ctx context.Context, input api.Sca
 func (s *EnhancedClusterService) GetClusterKubeconfig(ctx context.Context, input api.GetClusterKubeconfigInput) (*api.GetClusterKubeconfigOutput, error) {
 	logger := s.logger.WithContext(ctx).WithOperation("GetClusterKubeconfig").WithCluster(input.ClusterName, "")
 	logger.Debug("Getting cluster kubeconfig")
-	
+
 	// Validate input
 	if input.ClusterName == "" {
 		err := errors.New(errors.CodeInvalidInput, "cluster name is required")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		err := errors.New(errors.CodeUnavailable, "Kubernetes client not initialized")
 		logger.WithError(err).Error("Service unavailable")
 		return nil, err
 	}
-	
+
 	// Get kubeconfig secret with timeout
 	kubeconfigCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	
+
 	secret, err := s.kubeClient.GetKubeconfigSecret(kubeconfigCtx, input.ClusterName)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get kubeconfig secret")
@@ -522,7 +522,7 @@ func (s *EnhancedClusterService) GetClusterKubeconfig(ctx context.Context, input
 		}
 		return nil, errors.Wrap(err, errors.CodeKubernetesAPI, "failed to get kubeconfig")
 	}
-	
+
 	// Extract kubeconfig data
 	kubeconfigData, ok := secret.Data["value"]
 	if !ok {
@@ -530,14 +530,14 @@ func (s *EnhancedClusterService) GetClusterKubeconfig(ctx context.Context, input
 		logger.WithError(err).Error("Invalid kubeconfig secret format")
 		return nil, err
 	}
-	
+
 	// Validate kubeconfig is not empty
 	if len(kubeconfigData) == 0 {
 		err := errors.New(errors.CodeInternal, "kubeconfig data is empty")
 		logger.WithError(err).Error("Empty kubeconfig")
 		return nil, err
 	}
-	
+
 	logger.Info("Retrieved kubeconfig successfully", "size_bytes", len(kubeconfigData))
 	return &api.GetClusterKubeconfigOutput{
 		Kubeconfig: string(kubeconfigData),
@@ -548,25 +548,25 @@ func (s *EnhancedClusterService) GetClusterKubeconfig(ctx context.Context, input
 func (s *EnhancedClusterService) GetClusterNodes(ctx context.Context, input api.GetClusterNodesInput) (*api.GetClusterNodesOutput, error) {
 	logger := s.logger.WithContext(ctx).WithOperation("GetClusterNodes").WithCluster(input.ClusterName, "")
 	logger.Debug("Getting cluster nodes")
-	
+
 	// Validate input
 	if input.ClusterName == "" {
 		err := errors.New(errors.CodeInvalidInput, "cluster name is required")
 		logger.WithError(err).Error("Invalid input")
 		return nil, err
 	}
-	
+
 	// Check if kube client is available
 	if s.kubeClient == nil {
 		err := errors.New(errors.CodeUnavailable, "Kubernetes client not initialized")
 		logger.WithError(err).Error("Service unavailable")
 		return nil, err
 	}
-	
+
 	// Get kubeconfig first
 	nodesCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	
+
 	kubeconfigOutput, err := s.GetClusterKubeconfig(nodesCtx, api.GetClusterKubeconfigInput{
 		ClusterName: input.ClusterName,
 	})
@@ -574,28 +574,28 @@ func (s *EnhancedClusterService) GetClusterNodes(ctx context.Context, input api.
 		logger.WithError(err).Error("Failed to get kubeconfig for workload cluster")
 		return nil, errors.Wrap(err, errors.CodeDependencyFailure, "failed to get kubeconfig")
 	}
-	
+
 	// Create workload client
 	workloadClient, err := kube.NewWorkloadClientFromKubeconfig([]byte(kubeconfigOutput.Kubeconfig))
 	if err != nil {
 		logger.WithError(err).Error("Failed to create workload client")
 		return nil, errors.Wrap(err, errors.CodeInternal, "failed to create workload cluster client")
 	}
-	
+
 	// List nodes from workload cluster
 	logger.Debug("Listing nodes from workload cluster")
 	nodes, err := workloadClient.ListNodes(nodesCtx)
 	if err != nil {
 		logger.WithError(err).Error("Failed to list nodes from workload cluster")
-		
+
 		// Check for common errors
 		if errors.IsTimeout(err) {
 			return nil, errors.Wrap(err, errors.CodeTimeout, "timeout listing nodes from workload cluster")
 		}
-		
+
 		return nil, errors.Wrap(err, errors.CodeWorkloadCluster, "failed to list nodes from workload cluster")
 	}
-	
+
 	// Convert to API format
 	nodeInfos := make([]api.NodeInfo, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
@@ -606,7 +606,7 @@ func (s *EnhancedClusterService) GetClusterNodes(ctx context.Context, input api.
 			KubeletVersion: node.Status.NodeInfo.KubeletVersion,
 			Labels:         node.Labels,
 		}
-		
+
 		// Get addresses
 		for _, addr := range node.Status.Addresses {
 			switch addr.Type {
@@ -616,20 +616,20 @@ func (s *EnhancedClusterService) GetClusterNodes(ctx context.Context, input api.
 				nodeInfo.ExternalIP = addr.Address
 			}
 		}
-		
+
 		// Get instance type from labels
 		if instanceType, ok := node.Labels["node.kubernetes.io/instance-type"]; ok {
 			nodeInfo.InstanceType = instanceType
 		}
-		
+
 		// Get availability zone from labels
 		if az, ok := node.Labels["topology.kubernetes.io/zone"]; ok {
 			nodeInfo.AvailabilityZone = az
 		}
-		
+
 		nodeInfos = append(nodeInfos, nodeInfo)
 	}
-	
+
 	logger.Info("Retrieved cluster nodes successfully", "node_count", len(nodeInfos))
 	return &api.GetClusterNodesOutput{
 		Nodes: nodeInfos,
@@ -676,7 +676,7 @@ func (s *EnhancedClusterService) extractProviderName(variables map[string]interf
 			return providerStr
 		}
 	}
-	
+
 	// Fall back to inferring from template name
 	templateLower := strings.ToLower(templateName)
 	if strings.Contains(templateLower, "aws") {
@@ -688,7 +688,7 @@ func (s *EnhancedClusterService) extractProviderName(variables map[string]interf
 	if strings.Contains(templateLower, "gcp") || strings.Contains(templateLower, "google") {
 		return "gcp"
 	}
-	
+
 	// Default to AWS for V1.0 scope
 	return "aws"
 }
@@ -697,10 +697,10 @@ func (s *EnhancedClusterService) extractProviderName(variables map[string]interf
 func (s *EnhancedClusterService) waitForClusterPhase(ctx context.Context, clusterName, namespace string, timeout time.Duration) (*clusterv1.Cluster, error) {
 	waitCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	
+
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-waitCtx.Done():
@@ -710,7 +710,7 @@ func (s *EnhancedClusterService) waitForClusterPhase(ctx context.Context, cluste
 			if err != nil {
 				continue // Keep trying
 			}
-			
+
 			// Return cluster regardless of phase after initial creation
 			if cluster.Status.Phase != "" {
 				return cluster, nil
@@ -723,7 +723,7 @@ func (s *EnhancedClusterService) waitForClusterPhase(ctx context.Context, cluste
 func (s *EnhancedClusterService) waitForClusterDeleted(ctx context.Context, clusterName, namespace string) error {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -757,7 +757,7 @@ func (s *EnhancedClusterService) buildClusterResource(input api.CreateClusterInp
 			},
 		},
 	}
-	
+
 	// Add variables if provided
 	if len(input.Variables) > 0 {
 		variables := make([]clusterv1.ClusterVariable, 0, len(input.Variables))
@@ -775,7 +775,7 @@ func (s *EnhancedClusterService) buildClusterResource(input api.CreateClusterInp
 		}
 		cluster.Spec.Topology.Variables = variables
 	}
-	
+
 	return cluster
 }
 
@@ -807,18 +807,18 @@ func (s *EnhancedClusterService) getProviderStatus(ctx context.Context, cluster 
 	if s.providerManager == nil {
 		return nil, nil
 	}
-	
+
 	// Determine provider from cluster
 	providerName := "aws" // Default for now
 	if provider, ok := cluster.Labels["cluster.x-k8s.io/provider"]; ok {
 		providerName = provider
 	}
-	
+
 	// Get provider-specific status
 	if prov, exists := s.providerManager.GetProvider(providerName); exists {
 		return prov.GetProviderSpecificStatus(ctx, cluster)
 	}
-	
+
 	return nil, nil
 }
 
@@ -874,7 +874,7 @@ func (s *EnhancedClusterService) getInfrastructureRef(cluster *clusterv1.Cluster
 	if cluster.Spec.InfrastructureRef == nil {
 		return nil
 	}
-	
+
 	return map[string]interface{}{
 		"kind":       cluster.Spec.InfrastructureRef.Kind,
 		"name":       cluster.Spec.InfrastructureRef.Name,

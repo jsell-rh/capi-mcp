@@ -31,7 +31,7 @@ func NewClient(kubeconfig string, namespace string) (*Client, error) {
 	// Create the client configuration
 	var config *rest.Config
 	var err error
-	
+
 	if kubeconfig == "" {
 		// Use in-cluster config when no kubeconfig is provided
 		config, err = rest.InClusterConfig()
@@ -131,7 +131,7 @@ func (c *Client) DeleteCluster(ctx context.Context, name string) error {
 func (c *Client) GetMachineDeployment(ctx context.Context, clusterName, mdName string) (*clusterv1.MachineDeployment, error) {
 	// List all MachineDeployments for the cluster
 	mdList := &clusterv1.MachineDeploymentList{}
-	if err := c.client.List(ctx, mdList, 
+	if err := c.client.List(ctx, mdList,
 		client.InNamespace(c.namespace),
 		client.MatchingLabels{clusterv1.ClusterNameLabel: clusterName},
 	); err != nil {
@@ -171,20 +171,20 @@ func (c *Client) ListMachineDeployments(ctx context.Context, clusterName string)
 func (c *Client) GetKubeconfigSecret(ctx context.Context, clusterName string) (*corev1.Secret, error) {
 	// The kubeconfig secret name follows the pattern: <cluster-name>-kubeconfig
 	secretName := fmt.Sprintf("%s-kubeconfig", clusterName)
-	
+
 	secret := &corev1.Secret{}
 	key := types.NamespacedName{
 		Namespace: c.namespace,
 		Name:      secretName,
 	}
-	
+
 	if err := c.client.Get(ctx, key, secret); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("kubeconfig secret for cluster %s not found", clusterName)
 		}
 		return nil, fmt.Errorf("failed to get kubeconfig secret: %w", err)
 	}
-	
+
 	return secret, nil
 }
 
@@ -203,7 +203,7 @@ func (c *Client) GetClusterClass(ctx context.Context, name string) (*clusterv1.C
 	if c == nil || c.client == nil {
 		return nil, fmt.Errorf("kubernetes client not available (running in test mode)")
 	}
-	
+
 	clusterClass := &clusterv1.ClusterClass{}
 	key := types.NamespacedName{
 		Namespace: c.namespace,

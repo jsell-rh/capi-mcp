@@ -121,9 +121,9 @@ func TestTemplateVariable(t *testing.T) {
 		{
 			name: "complex object variable",
 			variable: TemplateVariable{
-				Name:        "networking",
-				Required:    false,
-				Type:        "object",
+				Name:     "networking",
+				Required: false,
+				Type:     "object",
 				Default: map[string]interface{}{
 					"cidr": "10.0.0.0/16",
 					"subnets": []string{
@@ -254,10 +254,10 @@ func TestClusterTemplateEdgeCases(t *testing.T) {
 func TestTemplateVariableTypes(t *testing.T) {
 	t.Run("string array default", func(t *testing.T) {
 		variable := TemplateVariable{
-			Name:     "subnets",
-			Type:     "array",
-			Default:  []string{"subnet-1", "subnet-2"},
-			Example:  []string{"subnet-a", "subnet-b", "subnet-c"},
+			Name:    "subnets",
+			Type:    "array",
+			Default: []string{"subnet-1", "subnet-2"},
+			Example: []string{"subnet-a", "subnet-b", "subnet-c"},
 		}
 
 		data, err := json.Marshal(variable)

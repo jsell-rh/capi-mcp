@@ -25,11 +25,11 @@ func NewClusterUtil(kubeClient client.Client, logger *slog.Logger) (*ClusterUtil
 	if kubeClient == nil {
 		return nil, fmt.Errorf("kubernetes client cannot be nil")
 	}
-	
+
 	if logger == nil {
 		return nil, fmt.Errorf("logger cannot be nil")
 	}
-	
+
 	return &ClusterUtil{
 		client: kubeClient,
 		logger: logger,
@@ -55,20 +55,20 @@ func (c *ClusterUtil) WaitForClusterReady(ctx context.Context, clusterName, name
 		"cluster", clusterName,
 		"namespace", namespace,
 		"timeout", timeout)
-	
+
 	return wait.PollUntilContextTimeout(ctx, 30*time.Second, timeout, false, func(ctx context.Context) (bool, error) {
 		cluster, err := c.GetCluster(ctx, clusterName, namespace)
 		if err != nil {
 			c.logger.Warn("Failed to get cluster while waiting", "error", err)
 			return false, nil // Continue polling
 		}
-		
+
 		c.logger.Debug("Cluster status check",
 			"cluster", clusterName,
 			"phase", cluster.Phase,
 			"controlPlaneReady", cluster.ControlPlaneReady,
 			"infrastructureReady", cluster.InfrastructureReady)
-		
+
 		// Check if cluster is ready
 		if cluster.Phase == string(clusterv1.ClusterPhaseProvisioned) &&
 			cluster.ControlPlaneReady &&
@@ -76,12 +76,12 @@ func (c *ClusterUtil) WaitForClusterReady(ctx context.Context, clusterName, name
 			c.logger.Info("Cluster is ready", "cluster", clusterName)
 			return true, nil
 		}
-		
+
 		// Check if cluster failed
 		if cluster.Phase == string(clusterv1.ClusterPhaseFailed) {
 			return false, fmt.Errorf("cluster failed to provision: %s", clusterName)
 		}
-		
+
 		return false, nil // Continue polling
 	})
 }
@@ -92,24 +92,24 @@ func (c *ClusterUtil) WaitForClusterDeleted(ctx context.Context, clusterName, na
 		"cluster", clusterName,
 		"namespace", namespace,
 		"timeout", timeout)
-	
+
 	return wait.PollUntilContextTimeout(ctx, 10*time.Second, timeout, false, func(ctx context.Context) (bool, error) {
 		cluster := &clusterv1.Cluster{}
 		err := c.client.Get(ctx, types.NamespacedName{
 			Name:      clusterName,
 			Namespace: namespace,
 		}, cluster)
-		
+
 		if apierrors.IsNotFound(err) {
 			c.logger.Info("Cluster has been deleted", "cluster", clusterName)
 			return true, nil
 		}
-		
+
 		if err != nil {
 			c.logger.Warn("Error checking cluster deletion status", "error", err)
 			return false, nil // Continue polling
 		}
-		
+
 		c.logger.Debug("Cluster still exists, continuing to wait", "cluster", clusterName)
 		return false, nil
 	})
@@ -122,11 +122,11 @@ func (c *ClusterUtil) GetCluster(ctx context.Context, clusterName, namespace str
 		Name:      clusterName,
 		Namespace: namespace,
 	}, cluster)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cluster %s/%s: %w", namespace, clusterName, err)
 	}
-	
+
 	return &ClusterInfo{
 		Name:                cluster.Name,
 		Namespace:           cluster.Namespace,
@@ -145,7 +145,7 @@ func (c *ClusterUtil) ListClusters(ctx context.Context, namespace string) ([]*Cl
 	if err != nil {
 		return nil, fmt.Errorf("failed to list clusters in namespace %s: %w", namespace, err)
 	}
-	
+
 	var clusters []*ClusterInfo
 	for _, cluster := range clusterList.Items {
 		clusterInfo := &ClusterInfo{
@@ -159,23 +159,23 @@ func (c *ClusterUtil) ListClusters(ctx context.Context, namespace string) ([]*Cl
 		}
 		clusters = append(clusters, clusterInfo)
 	}
-	
+
 	return clusters, nil
 }
 
 // GetMachineDeployments gets all MachineDeployments for a cluster
 func (c *ClusterUtil) GetMachineDeployments(ctx context.Context, clusterName, namespace string) ([]clusterv1.MachineDeployment, error) {
 	mdList := &clusterv1.MachineDeploymentList{}
-	
+
 	// List MachineDeployments with cluster label
-	err := c.client.List(ctx, mdList, 
+	err := c.client.List(ctx, mdList,
 		client.InNamespace(namespace),
 		client.MatchingLabels{clusterv1.ClusterNameLabel: clusterName})
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to list MachineDeployments for cluster %s/%s: %w", namespace, clusterName, err)
 	}
-	
+
 	return mdList.Items, nil
 }
 
@@ -186,34 +186,34 @@ func (c *ClusterUtil) WaitForMachineDeploymentReady(ctx context.Context, mdName,
 		"namespace", namespace,
 		"expectedReplicas", expectedReplicas,
 		"timeout", timeout)
-	
+
 	return wait.PollUntilContextTimeout(ctx, 15*time.Second, timeout, false, func(ctx context.Context) (bool, error) {
 		md := &clusterv1.MachineDeployment{}
 		err := c.client.Get(ctx, types.NamespacedName{
 			Name:      mdName,
 			Namespace: namespace,
 		}, md)
-		
+
 		if err != nil {
 			c.logger.Warn("Failed to get MachineDeployment while waiting", "error", err)
 			return false, nil
 		}
-		
+
 		c.logger.Debug("MachineDeployment status check",
 			"machineDeployment", mdName,
 			"replicas", md.Spec.Replicas,
 			"readyReplicas", md.Status.ReadyReplicas,
 			"updatedReplicas", md.Status.UpdatedReplicas)
-		
+
 		// Check if the desired number of replicas are ready
 		if md.Status.ReadyReplicas == expectedReplicas &&
 			md.Status.UpdatedReplicas == expectedReplicas {
-			c.logger.Info("MachineDeployment is ready", 
+			c.logger.Info("MachineDeployment is ready",
 				"machineDeployment", mdName,
 				"replicas", expectedReplicas)
 			return true, nil
 		}
-		
+
 		return false, nil
 	})
 }
@@ -221,57 +221,57 @@ func (c *ClusterUtil) WaitForMachineDeploymentReady(ctx context.Context, mdName,
 // GetClusterKubeconfig retrieves the kubeconfig secret for a cluster
 func (c *ClusterUtil) GetClusterKubeconfig(ctx context.Context, clusterName, namespace string) ([]byte, error) {
 	secretName := fmt.Sprintf("%s-kubeconfig", clusterName)
-	
+
 	secret := &corev1.Secret{}
 	err := c.client.Get(ctx, types.NamespacedName{
 		Name:      secretName,
 		Namespace: namespace,
 	}, secret)
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig secret %s/%s: %w", namespace, secretName, err)
 	}
-	
+
 	kubeconfigData, exists := secret.Data["value"]
 	if !exists {
 		return nil, fmt.Errorf("kubeconfig data not found in secret %s/%s", namespace, secretName)
 	}
-	
+
 	return kubeconfigData, nil
 }
 
 // ValidateClusterDeleted verifies that a cluster and its resources are completely removed
 func (c *ClusterUtil) ValidateClusterDeleted(ctx context.Context, clusterName, namespace string) error {
 	c.logger.Info("Validating cluster deletion", "cluster", clusterName, "namespace", namespace)
-	
+
 	// Check that cluster no longer exists
 	cluster := &clusterv1.Cluster{}
 	err := c.client.Get(ctx, types.NamespacedName{
 		Name:      clusterName,
 		Namespace: namespace,
 	}, cluster)
-	
+
 	if !apierrors.IsNotFound(err) {
 		if err != nil {
 			return fmt.Errorf("unexpected error checking cluster existence: %w", err)
 		}
 		return fmt.Errorf("cluster %s still exists", clusterName)
 	}
-	
+
 	// Check that MachineDeployments are deleted
 	mdList := &clusterv1.MachineDeploymentList{}
 	err = c.client.List(ctx, mdList,
 		client.InNamespace(namespace),
 		client.MatchingLabels{clusterv1.ClusterNameLabel: clusterName})
-	
+
 	if err != nil {
 		return fmt.Errorf("failed to list MachineDeployments: %w", err)
 	}
-	
+
 	if len(mdList.Items) > 0 {
 		return fmt.Errorf("found %d MachineDeployments that should have been deleted", len(mdList.Items))
 	}
-	
+
 	// Check that kubeconfig secret is deleted
 	kubeconfigSecretName := fmt.Sprintf("%s-kubeconfig", clusterName)
 	secret := &corev1.Secret{}
@@ -279,14 +279,14 @@ func (c *ClusterUtil) ValidateClusterDeleted(ctx context.Context, clusterName, n
 		Name:      kubeconfigSecretName,
 		Namespace: namespace,
 	}, secret)
-	
+
 	if !apierrors.IsNotFound(err) {
 		if err != nil {
 			return fmt.Errorf("unexpected error checking kubeconfig secret: %w", err)
 		}
 		return fmt.Errorf("kubeconfig secret %s still exists", kubeconfigSecretName)
 	}
-	
+
 	c.logger.Info("Cluster deletion validated successfully", "cluster", clusterName)
 	return nil
 }
@@ -298,7 +298,7 @@ func (c *ClusterUtil) GetClusterClasses(ctx context.Context, namespace string) (
 	if err != nil {
 		return nil, fmt.Errorf("failed to list ClusterClasses in namespace %s: %w", namespace, err)
 	}
-	
+
 	return ccList.Items, nil
 }
 
@@ -308,11 +308,11 @@ func (c *ClusterUtil) GetDefaultClusterClass(ctx context.Context, namespace stri
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if len(classes) == 0 {
 		return nil, fmt.Errorf("no ClusterClasses found in namespace %s", namespace)
 	}
-	
+
 	return &classes[0], nil
 }
 
@@ -323,31 +323,31 @@ func (c *ClusterUtil) WaitForClusterPhase(ctx context.Context, clusterName, name
 		"namespace", namespace,
 		"expectedPhase", expectedPhase,
 		"timeout", timeout)
-	
+
 	return wait.PollUntilContextTimeout(ctx, 15*time.Second, timeout, false, func(ctx context.Context) (bool, error) {
 		cluster, err := c.GetCluster(ctx, clusterName, namespace)
 		if err != nil {
 			c.logger.Warn("Failed to get cluster while waiting for phase", "error", err)
 			return false, nil // Continue polling
 		}
-		
+
 		c.logger.Debug("Checking cluster phase",
 			"cluster", clusterName,
 			"currentPhase", cluster.Phase,
 			"expectedPhase", expectedPhase)
-		
+
 		if cluster.Phase == expectedPhase {
 			c.logger.Info("Cluster reached expected phase",
 				"cluster", clusterName,
 				"phase", expectedPhase)
 			return true, nil
 		}
-		
+
 		// Check if cluster failed
 		if cluster.Phase == string(clusterv1.ClusterPhaseFailed) {
 			return false, fmt.Errorf("cluster failed while waiting for phase %s: %s", expectedPhase, clusterName)
 		}
-		
+
 		return false, nil // Continue polling
 	})
 }
@@ -364,19 +364,19 @@ func (c *ClusterUtil) GetClusterNodeCount(ctx context.Context, clusterName, name
 		Name:      clusterName,
 		Namespace: namespace,
 	}, cluster)
-	
+
 	if err != nil {
 		return 0, fmt.Errorf("failed to get cluster %s/%s: %w", namespace, clusterName, err)
 	}
-	
+
 	var totalNodes int32
-	
+
 	// Count control plane nodes
 	if cluster.Spec.Topology != nil {
 		// Use a default of 1 control plane node if not specified
 		totalNodes += 1
 	}
-	
+
 	// Count worker nodes from MachineDeployments
 	if cluster.Spec.Topology != nil && cluster.Spec.Topology.Workers != nil {
 		for _, md := range cluster.Spec.Topology.Workers.MachineDeployments {
@@ -385,53 +385,53 @@ func (c *ClusterUtil) GetClusterNodeCount(ctx context.Context, clusterName, name
 			}
 		}
 	}
-	
+
 	return totalNodes, nil
 }
 
 // ValidateClusterHealthy checks that a cluster is healthy and all nodes are ready
 func (c *ClusterUtil) ValidateClusterHealthy(ctx context.Context, clusterName, namespace string) error {
 	c.logger.Info("Validating cluster health", "cluster", clusterName, "namespace", namespace)
-	
+
 	// Get cluster info
 	cluster, err := c.GetCluster(ctx, clusterName, namespace)
 	if err != nil {
 		return fmt.Errorf("failed to get cluster: %w", err)
 	}
-	
+
 	// Check cluster phase
 	if cluster.Phase != string(clusterv1.ClusterPhaseProvisioned) {
 		return fmt.Errorf("cluster is not in Provisioned phase: %s", cluster.Phase)
 	}
-	
+
 	// Check control plane readiness
 	if !cluster.ControlPlaneReady {
 		return fmt.Errorf("control plane is not ready")
 	}
-	
+
 	// Check infrastructure readiness
 	if !cluster.InfrastructureReady {
 		return fmt.Errorf("infrastructure is not ready")
 	}
-	
+
 	// Check MachineDeployments
 	mds, err := c.GetMachineDeployments(ctx, clusterName, namespace)
 	if err != nil {
 		return fmt.Errorf("failed to get MachineDeployments: %w", err)
 	}
-	
+
 	for _, md := range mds {
 		if md.Spec.Replicas == nil {
 			continue
 		}
-		
+
 		expectedReplicas := *md.Spec.Replicas
 		if md.Status.ReadyReplicas != expectedReplicas {
 			return fmt.Errorf("MachineDeployment %s has %d ready replicas, expected %d",
 				md.Name, md.Status.ReadyReplicas, expectedReplicas)
 		}
 	}
-	
+
 	c.logger.Info("Cluster health validation passed", "cluster", clusterName)
 	return nil
 }

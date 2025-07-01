@@ -88,7 +88,7 @@ func TestLoad(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Clear environment
 			clearEnv()
-			
+
 			// Set test environment variables
 			for key, value := range tt.envVars {
 				t.Setenv(key, value)
@@ -114,7 +114,7 @@ func TestLoad(t *testing.T) {
 func TestGetEnvFunctions(t *testing.T) {
 	t.Run("getEnv", func(t *testing.T) {
 		t.Setenv("TEST_STRING", "test-value")
-		
+
 		assert.Equal(t, "test-value", getEnv("TEST_STRING", "default"))
 		assert.Equal(t, "default", getEnv("NON_EXISTENT", "default"))
 	})
@@ -122,7 +122,7 @@ func TestGetEnvFunctions(t *testing.T) {
 	t.Run("getEnvInt", func(t *testing.T) {
 		t.Setenv("TEST_INT", "123")
 		t.Setenv("TEST_INVALID_INT", "invalid")
-		
+
 		assert.Equal(t, 123, getEnvInt("TEST_INT", 999))
 		assert.Equal(t, 999, getEnvInt("TEST_INVALID_INT", 999))
 		assert.Equal(t, 999, getEnvInt("NON_EXISTENT", 999))
@@ -132,7 +132,7 @@ func TestGetEnvFunctions(t *testing.T) {
 		t.Setenv("TEST_BOOL_TRUE", "true")
 		t.Setenv("TEST_BOOL_FALSE", "false")
 		t.Setenv("TEST_INVALID_BOOL", "invalid")
-		
+
 		assert.True(t, getEnvBool("TEST_BOOL_TRUE", false))
 		assert.False(t, getEnvBool("TEST_BOOL_FALSE", true))
 		assert.True(t, getEnvBool("TEST_INVALID_BOOL", true))
@@ -142,7 +142,7 @@ func TestGetEnvFunctions(t *testing.T) {
 	t.Run("getEnvDuration", func(t *testing.T) {
 		t.Setenv("TEST_DURATION", "5m")
 		t.Setenv("TEST_INVALID_DURATION", "invalid")
-		
+
 		assert.Equal(t, 5*time.Minute, getEnvDuration("TEST_DURATION", time.Hour))
 		assert.Equal(t, time.Hour, getEnvDuration("TEST_INVALID_DURATION", time.Hour))
 		assert.Equal(t, time.Hour, getEnvDuration("NON_EXISTENT", time.Hour))
@@ -155,7 +155,7 @@ func clearEnv() {
 		"KUBE_NAMESPACE", "KUBECONFIG", "CLUSTER_TIMEOUT", "LOG_LEVEL",
 		"METRICS_PORT", "ENABLE_PPROF", "VERSION", "BUILD_DATE",
 	}
-	
+
 	for _, key := range envVars {
 		os.Unsetenv(key)
 	}

@@ -90,8 +90,8 @@ func TestCreateClusterInput(t *testing.T) {
 		TemplateName:      "aws-template",
 		KubernetesVersion: "v1.31.0",
 		Variables: map[string]interface{}{
-			"region":     "us-west-2",
-			"nodeCount":  3,
+			"region":    "us-west-2",
+			"nodeCount": 3,
 			"networking": map[string]interface{}{
 				"cidr": "10.0.0.0/16",
 			},
@@ -135,18 +135,18 @@ func TestScaleClusterInput(t *testing.T) {
 
 func TestNodeInfo(t *testing.T) {
 	nodeInfo := NodeInfo{
-		Name:              "worker-node-1",
-		Status:            "Ready",
-		Roles:             []string{"worker"},
-		KubeletVersion:    "v1.31.0",
-		InternalIP:        "10.0.1.100",
-		ExternalIP:        "203.0.113.100",
-		InstanceType:      "m5.large",
-		AvailabilityZone:  "us-west-2a",
+		Name:             "worker-node-1",
+		Status:           "Ready",
+		Roles:            []string{"worker"},
+		KubeletVersion:   "v1.31.0",
+		InternalIP:       "10.0.1.100",
+		ExternalIP:       "203.0.113.100",
+		InstanceType:     "m5.large",
+		AvailabilityZone: "us-west-2a",
 		Labels: map[string]string{
-			"node.kubernetes.io/instance-type":     "m5.large",
-			"topology.kubernetes.io/zone":          "us-west-2a",
-			"node-role.kubernetes.io/worker":       "",
+			"node.kubernetes.io/instance-type": "m5.large",
+			"topology.kubernetes.io/zone":      "us-west-2a",
+			"node-role.kubernetes.io/worker":   "",
 		},
 	}
 

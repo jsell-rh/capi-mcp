@@ -41,10 +41,18 @@ test-e2e: ## Run end-to-end tests
 	@echo "Running e2e tests..."
 	$(GO) test $(GOFLAGS) -tags=e2e $(TEST_DIR)/e2e/...
 
-lint: ## Run golangci-lint
+lint: ## Run linters
 	@echo "Running linters..."
-	@which golangci-lint > /dev/null || (echo "golangci-lint not found, run 'make tools' first" && exit 1)
-	golangci-lint run --timeout 5m
+	@echo "Formatting code..."
+	$(GO) fmt ./...
+	@echo "Checking format..."
+	@if [ "$$(gofmt -s -l . | wc -l)" -gt 0 ]; then \
+		echo "Code is not formatted properly:"; \
+		gofmt -s -l .; \
+		exit 1; \
+	fi
+	@echo "Running go vet..."
+	$(GO) vet ./...
 
 fmt: ## Format code
 	@echo "Formatting code..."

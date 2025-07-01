@@ -10,28 +10,28 @@ import (
 // Config holds the server configuration.
 type Config struct {
 	// Server configuration
-	ServerPort     int           `json:"server_port"`
-	ServerTimeout  time.Duration `json:"server_timeout"`
-	ShutdownGrace  time.Duration `json:"shutdown_grace"`
-	
+	ServerPort    int           `json:"server_port"`
+	ServerTimeout time.Duration `json:"server_timeout"`
+	ShutdownGrace time.Duration `json:"shutdown_grace"`
+
 	// Authentication
 	APIKey string `json:"-"`
-	
+
 	// Kubernetes configuration
 	KubeConfigPath string `json:"kubeconfig_path"`
 	KubeNamespace  string `json:"kube_namespace"`
-	
+
 	// CAPI configuration
 	ClusterTimeout time.Duration `json:"cluster_timeout"`
-	
+
 	// Provider configuration
 	Providers map[string]map[string]string `json:"providers"`
-	
+
 	// Observability
-	LogLevel     string `json:"log_level"`
-	MetricsPort  int    `json:"metrics_port"`
-	EnablePprof  bool   `json:"enable_pprof"`
-	
+	LogLevel    string `json:"log_level"`
+	MetricsPort int    `json:"metrics_port"`
+	EnablePprof bool   `json:"enable_pprof"`
+
 	// Version information
 	Version   string `json:"version"`
 	BuildDate string `json:"build_date"`
@@ -46,24 +46,24 @@ func Load() (*Config, error) {
 		ShutdownGrace:  getEnvDuration("SHUTDOWN_GRACE", 30*time.Second),
 		KubeNamespace:  getEnv("KUBE_NAMESPACE", "default"),
 		ClusterTimeout: getEnvDuration("CLUSTER_TIMEOUT", 10*time.Minute),
-		LogLevel:      getEnv("LOG_LEVEL", "info"),
-		MetricsPort:   getEnvInt("METRICS_PORT", 9090),
-		EnablePprof:   getEnvBool("ENABLE_PPROF", false),
-		Version:       getEnv("VERSION", "dev"),
-		BuildDate:     getEnv("BUILD_DATE", "unknown"),
-		Providers:     make(map[string]map[string]string),
+		LogLevel:       getEnv("LOG_LEVEL", "info"),
+		MetricsPort:    getEnvInt("METRICS_PORT", 9090),
+		EnablePprof:    getEnvBool("ENABLE_PPROF", false),
+		Version:        getEnv("VERSION", "dev"),
+		BuildDate:      getEnv("BUILD_DATE", "unknown"),
+		Providers:      make(map[string]map[string]string),
 	}
-	
+
 	// Required configuration
 	apiKey := os.Getenv("API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("API_KEY environment variable is required")
 	}
 	cfg.APIKey = apiKey
-	
+
 	// Kubernetes configuration
 	cfg.KubeConfigPath = getEnv("KUBECONFIG", "")
-	
+
 	return cfg, nil
 }
 

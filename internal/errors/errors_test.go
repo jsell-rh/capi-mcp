@@ -12,18 +12,18 @@ func TestError_Error(t *testing.T) {
 		expected string
 	}{
 		{
-			name: "simple error",
-			err:  New(CodeInvalidInput, "test message"),
+			name:     "simple error",
+			err:      New(CodeInvalidInput, "test message"),
 			expected: "INVALID_INPUT: test message",
 		},
 		{
-			name: "error with details",
-			err:  New(CodeInvalidInput, "test message").WithDetails("field", "name"),
+			name:     "error with details",
+			err:      New(CodeInvalidInput, "test message").WithDetails("field", "name"),
 			expected: "INVALID_INPUT: test message",
 		},
 		{
-			name: "wrapped error",
-			err:  Wrap(errors.New("internal error"), CodeInternal, "something went wrong"),
+			name:     "wrapped error",
+			err:      Wrap(errors.New("internal error"), CodeInternal, "something went wrong"),
 			expected: "INTERNAL_ERROR: something went wrong (caused by: internal error)",
 		},
 	}
@@ -243,7 +243,7 @@ func TestErrorCodes(t *testing.T) {
 			if string(code) == "" {
 				t.Errorf("Error code %v has empty string representation", code)
 			}
-			
+
 			// Test that we can create an error with this code
 			err := New(code, "test message")
 			if err.Code != code {

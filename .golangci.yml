@@ -4,8 +4,6 @@ run:
   build-tags:
     - integration
     - e2e
-  skip-dirs:
-    - test/e2e
   modules-download-mode: readonly
 
 linters:
@@ -148,6 +146,8 @@ linters-settings:
       - name: unreachable-code
 
 issues:
+  exclude-dirs:
+    - test/e2e
   exclude-rules:
     - path: _test\.go
       linters:

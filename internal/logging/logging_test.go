@@ -28,7 +28,7 @@ func TestNewLogger(t *testing.T) {
 			format: "text",
 		},
 		{
-			name:   "warn json", 
+			name:   "warn json",
 			level:  slog.LevelWarn,
 			format: "json",
 		},
@@ -203,7 +203,7 @@ func TestLogger_LogOperation(t *testing.T) {
 	}))
 
 	ctx := context.Background()
-	
+
 	// Test successful operation
 	err := logger.LogOperation(ctx, "test-op", func() error {
 		time.Sleep(10 * time.Millisecond) // Simulate some work
@@ -236,7 +236,7 @@ func TestLogger_LogOperation_WithError(t *testing.T) {
 
 	ctx := context.Background()
 	testErr := errors.New("operation failed")
-	
+
 	// Test operation that returns an error
 	err := logger.LogOperation(ctx, "failing-op", func() error {
 		return testErr
@@ -271,7 +271,7 @@ func TestLogger_LogToolCall(t *testing.T) {
 		"cluster_name": "test-cluster",
 		"replicas":     3,
 	}
-	
+
 	// Test successful tool call
 	result, err := logger.LogToolCall(ctx, "create_cluster", input, func() (interface{}, error) {
 		return map[string]interface{}{
@@ -288,12 +288,12 @@ func TestLogger_LogToolCall(t *testing.T) {
 		"success": true,
 		"cluster": "test-cluster",
 	}
-	
+
 	resultMap, ok := result.(map[string]interface{})
 	if !ok {
 		t.Errorf("Expected result to be map[string]interface{}, got %T", result)
 	}
-	
+
 	if resultMap["success"] != expectedResult["success"] {
 		t.Errorf("Expected success %v, got %v", expectedResult["success"], resultMap["success"])
 	}
@@ -363,12 +363,12 @@ func TestLoggerFromContext(t *testing.T) {
 	// Test with logger in context
 	logger := NewLogger(slog.LevelDebug, "json")
 	ctx := LoggerToContext(context.Background(), logger)
-	
+
 	retrievedLogger := LoggerFromContext(ctx)
 	if retrievedLogger != logger {
 		t.Error("LoggerFromContext() did not return the logger that was stored in context")
 	}
-	
+
 	// Test with no logger in context
 	emptyCtx := context.Background()
 	defaultLogger := LoggerFromContext(emptyCtx)
@@ -380,7 +380,7 @@ func TestLoggerFromContext(t *testing.T) {
 func TestLoggerToContext(t *testing.T) {
 	logger := NewLogger(slog.LevelDebug, "json")
 	ctx := LoggerToContext(context.Background(), logger)
-	
+
 	// Verify logger was stored in context
 	retrievedLogger := LoggerFromContext(ctx)
 	if retrievedLogger != logger {
@@ -391,16 +391,16 @@ func TestLoggerToContext(t *testing.T) {
 func TestFieldConstants(t *testing.T) {
 	// Test that field constants are defined and non-empty
 	fields := map[string]string{
-		"FieldTool":              FieldTool,
-		"FieldOperation":         FieldOperation,
-		"FieldDuration":          FieldDuration,
-		"FieldClusterName":       FieldClusterName,
-		"FieldClusterNamespace":  FieldClusterNamespace,
-		"FieldRequestID":         FieldRequestID,
-		"FieldUserAgent":         FieldUserAgent,
-		"FieldRemoteAddr":        FieldRemoteAddr,
-		"FieldStatusCode":        FieldStatusCode,
-		"FieldContentLength":     FieldContentLength,
+		"FieldTool":             FieldTool,
+		"FieldOperation":        FieldOperation,
+		"FieldDuration":         FieldDuration,
+		"FieldClusterName":      FieldClusterName,
+		"FieldClusterNamespace": FieldClusterNamespace,
+		"FieldRequestID":        FieldRequestID,
+		"FieldUserAgent":        FieldUserAgent,
+		"FieldRemoteAddr":       FieldRemoteAddr,
+		"FieldStatusCode":       FieldStatusCode,
+		"FieldContentLength":    FieldContentLength,
 	}
 
 	for name, value := range fields {

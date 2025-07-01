@@ -3,8 +3,8 @@ package provider
 import (
 	"context"
 
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // Provider defines the interface for infrastructure-specific operations.

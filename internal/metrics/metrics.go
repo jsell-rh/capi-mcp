@@ -14,47 +14,47 @@ import (
 const (
 	// Metric name prefixes
 	metricPrefix = "capi_mcp_"
-	
+
 	// Common label names
-	LabelTool        = "tool"
-	LabelStatus      = "status"
-	LabelOperation   = "operation"
-	LabelComponent   = "component"
-	LabelProvider    = "provider"
-	LabelCluster     = "cluster"
-	LabelNamespace   = "namespace"
-	LabelErrorCode   = "error_code"
+	LabelTool      = "tool"
+	LabelStatus    = "status"
+	LabelOperation = "operation"
+	LabelComponent = "component"
+	LabelProvider  = "provider"
+	LabelCluster   = "cluster"
+	LabelNamespace = "namespace"
+	LabelErrorCode = "error_code"
 )
 
 // Collector holds all Prometheus metrics
 type Collector struct {
 	// Request metrics
-	requestsTotal     *prometheus.CounterVec
-	requestDuration   *prometheus.HistogramVec
-	activeRequests    *prometheus.GaugeVec
-	
+	requestsTotal   *prometheus.CounterVec
+	requestDuration *prometheus.HistogramVec
+	activeRequests  *prometheus.GaugeVec
+
 	// Tool metrics
-	toolInvocationsTotal     *prometheus.CounterVec
-	toolExecutionDuration    *prometheus.HistogramVec
-	toolErrors               *prometheus.CounterVec
-	
+	toolInvocationsTotal  *prometheus.CounterVec
+	toolExecutionDuration *prometheus.HistogramVec
+	toolErrors            *prometheus.CounterVec
+
 	// Kubernetes API metrics
-	kubernetesAPICallsTotal    *prometheus.CounterVec
-	kubernetesAPICallDuration  *prometheus.HistogramVec
-	kubernetesAPIErrors        *prometheus.CounterVec
-	
+	kubernetesAPICallsTotal   *prometheus.CounterVec
+	kubernetesAPICallDuration *prometheus.HistogramVec
+	kubernetesAPIErrors       *prometheus.CounterVec
+
 	// Provider metrics
-	providerOperationsTotal     *prometheus.CounterVec
-	providerOperationDuration   *prometheus.HistogramVec
-	providerErrors              *prometheus.CounterVec
-	
+	providerOperationsTotal   *prometheus.CounterVec
+	providerOperationDuration *prometheus.HistogramVec
+	providerErrors            *prometheus.CounterVec
+
 	// Cluster metrics
-	clustersTotal      *prometheus.GaugeVec
-	clusterOperations  *prometheus.CounterVec
-	
+	clustersTotal     *prometheus.GaugeVec
+	clusterOperations *prometheus.CounterVec
+
 	// System metrics
-	serverInfo         *prometheus.GaugeVec
-	buildInfo          *prometheus.GaugeVec
+	serverInfo *prometheus.GaugeVec
+	buildInfo  *prometheus.GaugeVec
 }
 
 // NewCollector creates a new metrics collector with all metrics registered
@@ -73,7 +73,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelTool, LabelStatus},
 		),
-		
+
 		requestDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    metricPrefix + "request_duration_seconds",
@@ -82,7 +82,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelTool, LabelStatus},
 		),
-		
+
 		activeRequests: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: metricPrefix + "active_requests",
@@ -90,7 +90,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelTool},
 		),
-		
+
 		// Tool metrics
 		toolInvocationsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -99,7 +99,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelTool, LabelStatus},
 		),
-		
+
 		toolExecutionDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    metricPrefix + "tool_execution_duration_seconds",
@@ -108,7 +108,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelTool},
 		),
-		
+
 		toolErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: metricPrefix + "tool_errors_total",
@@ -116,7 +116,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelTool, LabelErrorCode},
 		),
-		
+
 		// Kubernetes API metrics
 		kubernetesAPICallsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -125,7 +125,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelOperation, LabelStatus},
 		),
-		
+
 		kubernetesAPICallDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    metricPrefix + "kubernetes_api_call_duration_seconds",
@@ -134,7 +134,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelOperation},
 		),
-		
+
 		kubernetesAPIErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: metricPrefix + "kubernetes_api_errors_total",
@@ -142,7 +142,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelOperation, LabelErrorCode},
 		),
-		
+
 		// Provider metrics
 		providerOperationsTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
@@ -151,7 +151,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelProvider, LabelOperation, LabelStatus},
 		),
-		
+
 		providerOperationDuration: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
 				Name:    metricPrefix + "provider_operation_duration_seconds",
@@ -160,7 +160,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelProvider, LabelOperation},
 		),
-		
+
 		providerErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: metricPrefix + "provider_errors_total",
@@ -168,7 +168,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelProvider, LabelOperation, LabelErrorCode},
 		),
-		
+
 		// Cluster metrics
 		clustersTotal: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -177,7 +177,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelProvider, LabelNamespace},
 		),
-		
+
 		clusterOperations: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: metricPrefix + "cluster_operations_total",
@@ -185,7 +185,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{LabelOperation, LabelProvider, LabelStatus},
 		),
-		
+
 		// System metrics
 		serverInfo: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -194,7 +194,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			},
 			[]string{"version", "build_time", "go_version"},
 		),
-		
+
 		buildInfo: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: metricPrefix + "build_info",
@@ -203,7 +203,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 			[]string{"version", "revision", "branch", "build_user", "build_date"},
 		),
 	}
-	
+
 	// Register all metrics
 	registerer.MustRegister(
 		c.requestsTotal,
@@ -223,7 +223,7 @@ func NewCollectorWithRegisterer(registerer prometheus.Registerer) *Collector {
 		c.serverInfo,
 		c.buildInfo,
 	)
-	
+
 	return c
 }
 
@@ -358,14 +358,14 @@ func NewMetricsMiddleware(collector *Collector, logger *slog.Logger) *MetricsMid
 // WrapToolExecution wraps a tool execution with metrics collection
 func (m *MetricsMiddleware) WrapToolExecution(tool string, fn func() error) error {
 	timer := NewTimer()
-	
+
 	// Track active request
 	m.collector.IncActiveRequests(tool)
 	defer m.collector.DecActiveRequests(tool)
-	
+
 	// Execute function
 	err := fn()
-	
+
 	// Record metrics
 	duration := timer.Duration()
 	status := "success"
@@ -373,22 +373,22 @@ func (m *MetricsMiddleware) WrapToolExecution(tool string, fn func() error) erro
 		status = "error"
 		m.collector.IncToolErrors(tool, "unknown") // TODO: Extract error code from error
 	}
-	
+
 	m.collector.IncToolInvocations(tool, status)
 	m.collector.ObserveToolExecutionDuration(tool, duration)
 	m.collector.IncRequestsTotal(tool, status)
 	m.collector.ObserveRequestDuration(tool, status, duration)
-	
+
 	return err
 }
 
 // WrapKubernetesOperation wraps a Kubernetes operation with metrics collection
 func (m *MetricsMiddleware) WrapKubernetesOperation(operation string, fn func() error) error {
 	timer := NewTimer()
-	
+
 	// Execute function
 	err := fn()
-	
+
 	// Record metrics
 	duration := timer.Duration()
 	status := "success"
@@ -396,20 +396,20 @@ func (m *MetricsMiddleware) WrapKubernetesOperation(operation string, fn func() 
 		status = "error"
 		m.collector.IncKubernetesAPIErrors(operation, "unknown") // TODO: Extract error code
 	}
-	
+
 	m.collector.IncKubernetesAPICalls(operation, status)
 	m.collector.ObserveKubernetesAPICallDuration(operation, duration)
-	
+
 	return err
 }
 
 // WrapProviderOperation wraps a provider operation with metrics collection
 func (m *MetricsMiddleware) WrapProviderOperation(provider, operation string, fn func() error) error {
 	timer := NewTimer()
-	
+
 	// Execute function
 	err := fn()
-	
+
 	// Record metrics
 	duration := timer.Duration()
 	status := "success"
@@ -417,10 +417,10 @@ func (m *MetricsMiddleware) WrapProviderOperation(provider, operation string, fn
 		status = "error"
 		m.collector.IncProviderErrors(provider, operation, "unknown") // TODO: Extract error code
 	}
-	
+
 	m.collector.IncProviderOperations(provider, operation, status)
 	m.collector.ObserveProviderOperationDuration(provider, operation, duration)
-	
+
 	return err
 }
 
@@ -428,18 +428,18 @@ func (m *MetricsMiddleware) WrapProviderOperation(provider, operation string, fn
 func StartMetricsServer(ctx context.Context, addr string, logger *slog.Logger) error {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
-	
+
 	// Add health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("OK"))
 	})
-	
+
 	server := &http.Server{
 		Addr:    addr,
 		Handler: mux,
 	}
-	
+
 	// Start server in goroutine
 	go func() {
 		logger.Info("Starting metrics server", "addr", addr)
@@ -447,15 +447,15 @@ func StartMetricsServer(ctx context.Context, addr string, logger *slog.Logger) e
 			logger.Error("Metrics server error", "error", err)
 		}
 	}()
-	
+
 	// Wait for context cancellation
 	<-ctx.Done()
-	
+
 	// Graceful shutdown
 	logger.Info("Shutting down metrics server")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	return server.Shutdown(shutdownCtx)
 }
 
@@ -467,7 +467,7 @@ func GetMetricsPort(addr string) int {
 			return port
 		}
 	}
-	
+
 	// Try to extract port after last colon
 	lastColon := -1
 	for i := len(addr) - 1; i >= 0; i-- {
@@ -476,12 +476,12 @@ func GetMetricsPort(addr string) int {
 			break
 		}
 	}
-	
+
 	if lastColon != -1 && lastColon < len(addr)-1 {
 		if port, err := strconv.Atoi(addr[lastColon+1:]); err == nil {
 			return port
 		}
 	}
-	
+
 	return 9090 // Default port
 }

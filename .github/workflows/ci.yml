@@ -29,6 +29,9 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
         
+      - name: Format code
+        run: go fmt ./...
+          
       - name: Check format
         run: |
           if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then

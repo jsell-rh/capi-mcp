@@ -6,13 +6,13 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/capi-mcp/capi-mcp-server/internal/config"
 	"github.com/capi-mcp/capi-mcp-server/internal/kube"
 	"github.com/capi-mcp/capi-mcp-server/internal/service"
 	"github.com/capi-mcp/capi-mcp-server/pkg/provider"
 	"github.com/capi-mcp/capi-mcp-server/pkg/provider/aws"
 	"github.com/capi-mcp/capi-mcp-server/pkg/tools"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // Server represents the CAPI MCP server.
@@ -51,7 +51,7 @@ func New(cfg *config.Config, logger *slog.Logger) (*Server, error) {
 
 // Run starts the server and blocks until the context is cancelled.
 func (s *Server) Run(ctx context.Context) error {
-	s.logger.Info("server starting", 
+	s.logger.Info("server starting",
 		"port", s.config.ServerPort,
 		"metrics_port", s.config.MetricsPort,
 	)
@@ -61,13 +61,13 @@ func (s *Server) Run(ctx context.Context) error {
 		// Verify authentication before returning server
 		authHeader := r.Header.Get("Authorization")
 		const bearerPrefix = "Bearer "
-		
-		if authHeader == "" || len(authHeader) < len(bearerPrefix) || 
+
+		if authHeader == "" || len(authHeader) < len(bearerPrefix) ||
 			authHeader[:len(bearerPrefix)] != bearerPrefix ||
 			authHeader[len(bearerPrefix):] != s.config.APIKey {
 			return nil // This will cause the handler to return 401
 		}
-		
+
 		return s.mcpServer
 	}, nil)
 
@@ -109,7 +109,7 @@ func (s *Server) registerCapabilities() error {
 	providerManager := provider.NewProviderManager()
 	awsProvider := aws.NewAWSProvider("") // Use default region
 	providerManager.RegisterProvider(awsProvider)
-	
+
 	// TODO: Create CAPI client and service - for now create stub
 	// In a real implementation, we would create the CAPI client here
 	// kubeClient, err := kube.NewClient(s.config.KubeConfigPath, s.config.KubeNamespace)
@@ -117,11 +117,11 @@ func (s *Server) registerCapabilities() error {
 	//     return fmt.Errorf("failed to create kube client: %w", err)
 	// }
 	// clusterService := service.NewClusterService(kubeClient, s.logger, providerManager)
-	
+
 	// For now, create stub kube client and service with provider manager
 	var kubeClient *kube.Client // nil for now
 	clusterService := service.NewClusterService(kubeClient, s.logger, providerManager)
-	
+
 	// Create tool provider
 	toolProvider := tools.NewProvider(s.mcpServer, s.logger, clusterService)
 
@@ -139,7 +139,7 @@ func (s *Server) registerCapabilities() error {
 func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Log request
-		s.logger.Debug("handling request", 
+		s.logger.Debug("handling request",
 			"remote_addr", r.RemoteAddr,
 			"method", r.Method,
 			"path", r.URL.Path,
@@ -148,10 +148,10 @@ func (s *Server) loggingMiddleware(next http.Handler) http.Handler {
 
 		// Create response writer wrapper to capture status code
 		wrapped := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
-		
+
 		// Handle request
 		next.ServeHTTP(wrapped, r)
-		
+
 		// Log response
 		s.logger.Info("request completed",
 			"remote_addr", r.RemoteAddr,

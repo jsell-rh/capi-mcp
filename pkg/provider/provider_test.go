@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // mockProvider implements the Provider interface for testing
@@ -98,7 +98,7 @@ func TestProviderManager_ListProviders(t *testing.T) {
 	t.Run("with providers", func(t *testing.T) {
 		provider1 := &mockProvider{name: "provider-1"}
 		provider2 := &mockProvider{name: "provider-2"}
-		
+
 		pm.RegisterProvider(provider1)
 		pm.RegisterProvider(provider2)
 
@@ -111,29 +111,29 @@ func TestProviderManager_ListProviders(t *testing.T) {
 
 func TestProviderManager_MultipleProviders(t *testing.T) {
 	pm := NewProviderManager()
-	
+
 	// Register multiple providers
 	awsProvider := &mockProvider{name: "aws"}
 	azureProvider := &mockProvider{name: "azure"}
 	gcpProvider := &mockProvider{name: "gcp"}
-	
+
 	pm.RegisterProvider(awsProvider)
 	pm.RegisterProvider(azureProvider)
 	pm.RegisterProvider(gcpProvider)
-	
+
 	// Verify all providers are registered
 	providers := pm.ListProviders()
 	assert.Len(t, providers, 3)
-	
+
 	// Verify each provider can be retrieved
 	aws, exists := pm.GetProvider("aws")
 	require.True(t, exists)
 	assert.Equal(t, "aws", aws.Name())
-	
+
 	azure, exists := pm.GetProvider("azure")
 	require.True(t, exists)
 	assert.Equal(t, "azure", azure.Name())
-	
+
 	gcp, exists := pm.GetProvider("gcp")
 	require.True(t, exists)
 	assert.Equal(t, "gcp", gcp.Name())
@@ -141,19 +141,19 @@ func TestProviderManager_MultipleProviders(t *testing.T) {
 
 func TestProviderManager_OverwriteProvider(t *testing.T) {
 	pm := NewProviderManager()
-	
+
 	// Register initial provider
 	provider1 := &mockProvider{name: "test"}
 	pm.RegisterProvider(provider1)
-	
+
 	// Register provider with same name (should overwrite)
 	provider2 := &mockProvider{name: "test"}
 	pm.RegisterProvider(provider2)
-	
+
 	// Verify only one provider with the name exists and it's the second one
 	providers := pm.ListProviders()
 	assert.Len(t, providers, 1)
-	
+
 	result, exists := pm.GetProvider("test")
 	require.True(t, exists)
 	assert.Equal(t, provider2, result) // Should be the second provider

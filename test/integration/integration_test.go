@@ -72,7 +72,7 @@ func TestFullClusterLifecycle(t *testing.T) {
 
 	// Create test ClusterClass
 	clusterClass := createTestClusterClass()
-	
+
 	// Create test cluster and related resources
 	cluster := createTestCluster("test-cluster", "default", clusterv1.ClusterPhaseProvisioned)
 	machineDeployment := createTestMachineDeployment("test-cluster-md", "default", "test-cluster", 3)
@@ -213,7 +213,7 @@ func TestMockCAPIOperations(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				// Test cluster status extraction
 				assert.Equal(t, tc.expected, tc.cluster.Status.Phase)
-				
+
 				// Test readiness checks
 				if tc.cluster.Status.Phase == string(clusterv1.ClusterPhaseProvisioned) {
 					assert.True(t, kube.IsClusterReady(tc.cluster))
@@ -234,7 +234,7 @@ func TestMockCAPIOperations(t *testing.T) {
 	t.Run("machine deployment operations", func(t *testing.T) {
 		// Test machine deployment scaling scenarios
 		md := createTestMachineDeployment("test-md", "default", "test-cluster", 3)
-		
+
 		// Verify initial state
 		assert.Equal(t, int32(3), *md.Spec.Replicas)
 		assert.Equal(t, int32(3), md.Status.UpdatedReplicas)
@@ -252,11 +252,11 @@ func TestMockCAPIOperations(t *testing.T) {
 
 	t.Run("kubeconfig secret handling", func(t *testing.T) {
 		secret := createTestKubeconfigSecret("test-cluster", "default")
-		
+
 		// Verify secret structure
 		assert.Equal(t, "test-cluster-kubeconfig", secret.Name)
 		assert.Contains(t, secret.Data, "value")
-		
+
 		// Verify kubeconfig content is valid YAML
 		kubeconfigData := secret.Data["value"]
 		assert.NotEmpty(t, kubeconfigData)
@@ -276,7 +276,7 @@ func TestProviderSpecificIntegration(t *testing.T) {
 
 		// Test cluster with AWS infrastructure
 		cluster := createTestAWSCluster("aws-cluster", "default")
-		
+
 		err := awsProvider.ValidateInfrastructureReadiness(ctx, cluster)
 		assert.NoError(t, err, "AWS cluster should be ready")
 
@@ -298,10 +298,10 @@ func TestProviderSpecificIntegration(t *testing.T) {
 
 		// Test cluster with region variable
 		cluster := createTestAWSClusterWithRegion("aws-cluster-with-region", "default", "us-east-1")
-		
+
 		status, err := awsProvider.GetProviderSpecificStatus(ctx, cluster)
 		require.NoError(t, err)
-		
+
 		assert.Equal(t, "aws", status["provider"])
 		assert.Equal(t, "AWSCluster", status["infrastructureKind"])
 		assert.Equal(t, "us-east-1", status["region"])
@@ -312,19 +312,19 @@ func TestProviderSpecificIntegration(t *testing.T) {
 		// Test that multiple providers can be registered
 		providers := suite.providerManager.ListProviders()
 		assert.Contains(t, providers, "aws")
-		
+
 		// Verify we could add more providers
 		assert.Equal(t, 1, len(providers)) // Currently only AWS
-		
+
 		// Test provider capabilities
 		awsProvider, exists := suite.providerManager.GetProvider("aws")
 		require.True(t, exists)
-		
+
 		// Verify AWS-specific capabilities
 		regions, err := awsProvider.GetRegions(ctx)
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(regions), 10) // Should have many regions
-		
+
 		instanceTypes, err := awsProvider.GetInstanceTypes(ctx, "us-west-2")
 		require.NoError(t, err)
 		assert.GreaterOrEqual(t, len(instanceTypes), 20) // Should have many instance types
@@ -423,18 +423,18 @@ func createTestAWSCluster(name, namespace string) *clusterv1.Cluster {
 
 func createTestAWSClusterWithRegion(name, namespace, region string) *clusterv1.Cluster {
 	cluster := createTestAWSCluster(name, namespace)
-	
+
 	// Add region variable
 	regionValue := &apiextensionsv1.JSON{}
 	regionValue.Raw = []byte(`"` + region + `"`)
-	
+
 	cluster.Spec.Topology.Variables = []clusterv1.ClusterVariable{
 		{
 			Name:  "region",
 			Value: *regionValue,
 		},
 	}
-	
+
 	return cluster
 }
 

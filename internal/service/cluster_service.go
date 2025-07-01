@@ -131,7 +131,7 @@ func (s *ClusterService) GetCluster(ctx context.Context, input api.GetClusterInp
 func (s *ClusterService) CreateCluster(ctx context.Context, input api.CreateClusterInput) (*api.CreateClusterOutput, error) {
 	// Determine provider from variables or cluster class metadata
 	providerName := s.extractProviderName(input.Variables, input.TemplateName)
-	
+
 	// Validate cluster configuration with provider-specific logic
 	if s.providerManager != nil {
 		if prov, exists := s.providerManager.GetProvider(providerName); exists {
@@ -276,7 +276,7 @@ func (s *ClusterService) ScaleCluster(ctx context.Context, input api.ScaleCluste
 		return nil, fmt.Errorf("failed to update machine deployment: %w", err)
 	}
 
-	s.logger.Info("cluster scaling initiated", 
+	s.logger.Info("cluster scaling initiated",
 		"cluster", input.ClusterName,
 		"node_pool", input.NodePoolName,
 		"old_replicas", oldReplicas,
@@ -313,9 +313,8 @@ func (s *ClusterService) GetClusterKubeconfig(ctx context.Context, input api.Get
 // GetClusterNodes retrieves nodes from a workload cluster.
 func (s *ClusterService) GetClusterNodes(ctx context.Context, input api.GetClusterNodesInput) (*api.GetClusterNodesOutput, error) {
 	// Get kubeconfig first
-	kubeconfigOutput, err := s.GetClusterKubeconfig(ctx, api.GetClusterKubeconfigInput{
-		ClusterName: input.ClusterName,
-	})
+	kubeconfigInput := api.GetClusterKubeconfigInput(input)
+	kubeconfigOutput, err := s.GetClusterKubeconfig(ctx, kubeconfigInput)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 	}

@@ -10,13 +10,13 @@ type ListClustersOutput struct {
 
 // ClusterSummary provides basic information about a cluster.
 type ClusterSummary struct {
-	Name            string `json:"name"`
-	Namespace       string `json:"namespace"`
-	Provider        string `json:"provider"`
+	Name              string `json:"name"`
+	Namespace         string `json:"namespace"`
+	Provider          string `json:"provider"`
 	KubernetesVersion string `json:"kubernetes_version"`
-	Status          string `json:"status"`
-	CreatedAt       string `json:"created_at"`
-	NodeCount       int    `json:"node_count"`
+	Status            string `json:"status"`
+	CreatedAt         string `json:"created_at"`
+	NodeCount         int    `json:"node_count"`
 }
 
 // GetClusterInput defines the parameters for the get_cluster tool.
@@ -124,13 +124,13 @@ type GetClusterNodesOutput struct {
 
 // NodeInfo provides information about a node.
 type NodeInfo struct {
-	Name              string            `json:"name"`
-	Status            string            `json:"status"`
-	Roles             []string          `json:"roles"`
-	KubeletVersion    string            `json:"kubelet_version"`
-	InternalIP        string            `json:"internal_ip"`
-	ExternalIP        string            `json:"external_ip,omitempty"`
-	InstanceType      string            `json:"instance_type"`
-	AvailabilityZone  string            `json:"availability_zone"`
-	Labels            map[string]string `json:"labels"`
+	Name             string            `json:"name"`
+	Status           string            `json:"status"`
+	Roles            []string          `json:"roles"`
+	KubeletVersion   string            `json:"kubelet_version"`
+	InternalIP       string            `json:"internal_ip"`
+	ExternalIP       string            `json:"external_ip,omitempty"`
+	InstanceType     string            `json:"instance_type"`
+	AvailabilityZone string            `json:"availability_zone"`
+	Labels           map[string]string `json:"labels"`
 }

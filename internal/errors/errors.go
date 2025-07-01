@@ -10,37 +10,37 @@ import (
 var (
 	// ErrNotFound indicates a requested resource was not found
 	ErrNotFound = errors.New("resource not found")
-	
+
 	// ErrAlreadyExists indicates a resource already exists
 	ErrAlreadyExists = errors.New("resource already exists")
-	
+
 	// ErrInvalidInput indicates invalid input parameters
 	ErrInvalidInput = errors.New("invalid input")
-	
+
 	// ErrUnauthorized indicates authentication/authorization failure
 	ErrUnauthorized = errors.New("unauthorized")
-	
+
 	// ErrForbidden indicates the operation is not allowed
 	ErrForbidden = errors.New("forbidden")
-	
+
 	// ErrTimeout indicates an operation timed out
 	ErrTimeout = errors.New("operation timed out")
-	
+
 	// ErrInternal indicates an internal server error
 	ErrInternal = errors.New("internal server error")
-	
+
 	// ErrProviderNotFound indicates the specified provider doesn't exist
 	ErrProviderNotFound = errors.New("provider not found")
-	
+
 	// ErrProviderValidation indicates provider validation failed
 	ErrProviderValidation = errors.New("provider validation failed")
-	
+
 	// ErrClusterNotReady indicates cluster is not in ready state
 	ErrClusterNotReady = errors.New("cluster not ready")
-	
+
 	// ErrClusterFailed indicates cluster is in failed state
 	ErrClusterFailed = errors.New("cluster failed")
-	
+
 	// ErrOperationInProgress indicates another operation is in progress
 	ErrOperationInProgress = errors.New("operation in progress")
 )
@@ -57,7 +57,7 @@ const (
 	CodeForbidden          ErrorCode = "FORBIDDEN"
 	CodeValidationFailed   ErrorCode = "VALIDATION_FAILED"
 	CodePreconditionFailed ErrorCode = "PRECONDITION_FAILED"
-	
+
 	// Server errors (5xx equivalent)
 	CodeInternal           ErrorCode = "INTERNAL_ERROR"
 	CodeTimeout            ErrorCode = "TIMEOUT"
@@ -96,12 +96,12 @@ func (e *Error) Is(target error) bool {
 	if target == nil {
 		return false
 	}
-	
+
 	// Check if target is an Error with same code
 	if targetErr, ok := target.(*Error); ok {
 		return e.Code == targetErr.Code
 	}
-	
+
 	// Check if cause matches
 	return errors.Is(e.Cause, target)
 }
@@ -120,7 +120,7 @@ func Wrap(err error, code ErrorCode, message string) *Error {
 	if err == nil {
 		return nil
 	}
-	
+
 	// If err is already an Error, preserve its details
 	if e, ok := err.(*Error); ok {
 		return &Error{
@@ -130,7 +130,7 @@ func Wrap(err error, code ErrorCode, message string) *Error {
 			Cause:   err,
 		}
 	}
-	
+
 	return &Error{
 		Code:    code,
 		Message: message,
@@ -164,21 +164,21 @@ func IsNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check standard errors
 	if errors.Is(err, ErrNotFound) {
 		return true
 	}
-	
+
 	// Check Error type
 	var e *Error
 	if errors.As(err, &e) && e.Code == CodeNotFound {
 		return true
 	}
-	
+
 	// Check error message for common patterns
 	errStr := strings.ToLower(err.Error())
-	return strings.Contains(errStr, "not found") || 
+	return strings.Contains(errStr, "not found") ||
 		strings.Contains(errStr, "does not exist")
 }
 
@@ -187,21 +187,21 @@ func IsAlreadyExists(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check standard errors
 	if errors.Is(err, ErrAlreadyExists) {
 		return true
 	}
-	
+
 	// Check Error type
 	var e *Error
 	if errors.As(err, &e) && e.Code == CodeAlreadyExists {
 		return true
 	}
-	
+
 	// Check error message for common patterns
 	errStr := strings.ToLower(err.Error())
-	return strings.Contains(errStr, "already exists") || 
+	return strings.Contains(errStr, "already exists") ||
 		strings.Contains(errStr, "duplicate")
 }
 
@@ -210,21 +210,21 @@ func IsTimeout(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check standard errors
 	if errors.Is(err, ErrTimeout) {
 		return true
 	}
-	
+
 	// Check Error type
 	var e *Error
 	if errors.As(err, &e) && e.Code == CodeTimeout {
 		return true
 	}
-	
+
 	// Check error message for common patterns
 	errStr := strings.ToLower(err.Error())
-	return strings.Contains(errStr, "timeout") || 
+	return strings.Contains(errStr, "timeout") ||
 		strings.Contains(errStr, "deadline exceeded")
 }
 
@@ -233,21 +233,21 @@ func IsUnauthorized(err error) bool {
 	if err == nil {
 		return false
 	}
-	
+
 	// Check standard errors
 	if errors.Is(err, ErrUnauthorized) {
 		return true
 	}
-	
+
 	// Check Error type
 	var e *Error
 	if errors.As(err, &e) && e.Code == CodeUnauthorized {
 		return true
 	}
-	
+
 	// Check error message for common patterns
 	errStr := strings.ToLower(err.Error())
-	return strings.Contains(errStr, "unauthorized") || 
+	return strings.Contains(errStr, "unauthorized") ||
 		strings.Contains(errStr, "authentication failed")
 }
 
@@ -256,12 +256,12 @@ func GetErrorCode(err error) ErrorCode {
 	if err == nil {
 		return ""
 	}
-	
+
 	var e *Error
 	if errors.As(err, &e) {
 		return e.Code
 	}
-	
+
 	// Map standard errors to codes
 	switch {
 	case errors.Is(err, ErrNotFound):
@@ -288,13 +288,13 @@ func GetUserMessage(err error) string {
 	if err == nil {
 		return ""
 	}
-	
+
 	var e *Error
 	if errors.As(err, &e) {
 		// Return the high-level message without internal details
 		return e.Message
 	}
-	
+
 	// For standard errors, return generic messages
 	switch {
 	case IsNotFound(err):
@@ -325,7 +325,7 @@ func SanitizeErrorMessage(message string) string {
 		{"AKIA[a-zA-Z0-9]+", "[REDACTED]"},
 		{"aws_[a-zA-Z0-9_]+", "[REDACTED]"},
 	}
-	
+
 	result := message
 	for _, pattern := range patterns {
 		// Simple string replacement for common patterns
@@ -343,6 +343,6 @@ func SanitizeErrorMessage(message string) string {
 			result = strings.Join(parts, " ")
 		}
 	}
-	
+
 	return result
 }
