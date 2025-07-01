@@ -107,6 +107,16 @@ Please read [CLAUDE.md](CLAUDE.md) for development guidelines and standards.
 
 See [roadmap.md](roadmap.md) for the project vision and development phases.
 
+## AI Development Disclaimer
+
+⚠️ **Important**: This repository was primarily created by Claude, Anthropic's AI assistant, working in collaboration with a human developer. The code, documentation, tests, and overall architecture were generated through AI-assisted development sessions.
+
+While the code follows industry best practices and includes comprehensive testing, users should:
+- Review all code before deploying to production environments
+- Understand the security implications of the implementation
+- Validate the code meets their specific requirements and compliance standards
+- Consider the experimental nature of AI-generated code in critical systems
+
 ## License
 
 [License details to be added]
