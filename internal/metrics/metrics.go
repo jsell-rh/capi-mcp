@@ -432,12 +432,19 @@ func StartMetricsServer(ctx context.Context, addr string, logger *slog.Logger) e
 	// Add health check endpoint
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		if _, err := w.Write([]byte("OK")); err != nil {
+			// Log error but don't fail the handler
+			slog.Default().Error("Failed to write health check response", "error", err)
+		}
 	})
 
 	server := &http.Server{
-		Addr:    addr,
-		Handler: mux,
+		Addr:              addr,
+		Handler:           mux,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second, // Prevents Slowloris attacks
 	}
 
 	// Start server in goroutine

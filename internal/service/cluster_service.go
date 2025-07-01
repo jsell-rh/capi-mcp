@@ -268,6 +268,10 @@ func (s *ClusterService) ScaleCluster(ctx context.Context, input api.ScaleCluste
 	}
 
 	// Update replicas
+	// Check for overflow before converting
+	if input.Replicas > 2147483647 || input.Replicas < -2147483648 {
+		return nil, fmt.Errorf("replica count is too large for int32")
+	}
 	newReplicas := int32(input.Replicas)
 	md.Spec.Replicas = &newReplicas
 

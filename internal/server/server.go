@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/capi-mcp/capi-mcp-server/internal/config"
 	"github.com/capi-mcp/capi-mcp-server/internal/kube"
@@ -74,10 +75,14 @@ func (s *Server) Run(ctx context.Context) error {
 	// Wrap with logging middleware
 	loggedHandler := s.loggingMiddleware(handler)
 
-	// Create HTTP server
+	// Create HTTP server with security timeouts
 	httpServer := &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.config.ServerPort),
-		Handler: loggedHandler,
+		Addr:           fmt.Sprintf(":%d", s.config.ServerPort),
+		Handler:        loggedHandler,
+		ReadTimeout:    30 * time.Second,
+		WriteTimeout:   30 * time.Second,
+		IdleTimeout:    120 * time.Second,
+		ReadHeaderTimeout: 10 * time.Second, // Prevents Slowloris attacks
 	}
 
 	// Start server in goroutine

@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -24,12 +25,27 @@ type Command struct {
 
 // NewCommand creates a new command with the specified name and arguments
 func NewCommand(name string, args ...string) *Command {
+	// Sanitize command name and arguments to prevent injection
+	sanitizedName := sanitizeCommandInput(name)
+	sanitizedArgs := make([]string, len(args))
+	for i, arg := range args {
+		sanitizedArgs[i] = sanitizeCommandInput(arg)
+	}
+	
 	return &Command{
-		name:   name,
-		args:   args,
+		name:   sanitizedName,
+		args:   sanitizedArgs,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
+}
+
+// sanitizeCommandInput removes potentially dangerous characters from command inputs
+func sanitizeCommandInput(input string) string {
+	// Remove shell metacharacters that could be used for injection
+	// Keep only alphanumeric, dash, underscore, dot, slash, and space
+	re := regexp.MustCompile(`[^a-zA-Z0-9\-_./:= ]`)
+	return re.ReplaceAllString(input, "")
 }
 
 // RunWithContext executes the command with a context for cancellation

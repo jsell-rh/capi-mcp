@@ -396,10 +396,18 @@ func (v *Validator) ValidateDNSName(name string) error {
 func toInt32(v interface{}) (int32, bool) {
 	switch val := v.(type) {
 	case int:
+		// Check for overflow before converting
+		if val > 2147483647 || val < -2147483648 {
+			return 0, false
+		}
 		return int32(val), true
 	case int32:
 		return val, true
 	case int64:
+		// Check for overflow before converting
+		if val > 2147483647 || val < -2147483648 {
+			return 0, false
+		}
 		return int32(val), true
 	case float32:
 		return int32(val), true
